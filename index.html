@@ -73,6 +73,7 @@ a { color: var(--accent); }
 /* меню */
 .search { width: 100%; border: 1px solid var(--line); background: var(--surface-2); border-radius: 12px; padding: 11px 14px; outline: none; font-size: 16px; }
 .search:focus { border-color: var(--accent); background: #fff; }
+select.search { appearance: none; -webkit-appearance: none; color: var(--ink); }
 .chips { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0 2px; scrollbar-width: none; margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
 .chips::-webkit-scrollbar { display: none; }
 .fchip { flex: none; border: 1px solid var(--line); border-radius: 99px; padding: 6px 12px; font-size: 13px; font-weight: 600; background: #fff; }
@@ -176,6 +177,7 @@ a { color: var(--accent); }
 
 /* нижнее меню */
 .tabs { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,.96); backdrop-filter: blur(10px); border-top: 1px solid var(--line); display: flex; justify-content: center; padding-bottom: var(--safe-b); z-index: 20; }
+.tabs[hidden] { display: none; }
 .tabs nav { display: flex; width: 100%; max-width: 640px; }
 .tabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 9px 0 8px; font-size: 11px; font-weight: 600; color: var(--muted); }
 .tabs button svg { width: 23px; height: 23px; }
@@ -752,6 +754,41 @@ function screen(title, text, closeBtn) {
 }
 
 // ---------- запуск ----------
+// анкета нового сотрудника → заявка администраторам
+async function regForm() {
+  document.getElementById('tabs').hidden = true;
+  $app.innerHTML = '<div class="center"><div class="spin"></div></div>';
+  let info;
+  try { info = await api('regInfo'); } catch (e) { return screen('Не получилось загрузить', esc(e.message)); }
+  if (info.status === 'Заявка') return errorScreen('PENDING');
+  if (!info.status && info.listed) { try { const r = await api('register', {}); if (r.status === 'Активен') return location.reload(); } catch (e) {} }
+  const opt = (list, ph) => '<option value="">' + ph + '</option>' + list.map(x => '<option>' + esc(x) + '</option>').join('');
+  $app.innerHTML = '<div class="view anim" style="padding-top:20px"><div style="color:var(--accent);width:120px">' + logo() + '</div>' +
+    '<h2 style="font:600 30px/1.1 var(--serif);margin:14px 0 4px">Анкета сотрудника</h2>' +
+    '<p class="lead">Администратор проверит её и откроет доступ — бот сообщит.</p>' +
+    '<form id="reg" class="list" style="margin-top:10px" autocomplete="off">' +
+    '<label class="flabel">Фамилия и имя</label><input class="search" name="name" placeholder="Иванова Мария" value="' + esc(info.name) + '">' +
+    '<label class="flabel">Возраст</label><input class="search" name="age" inputmode="numeric" placeholder="23">' +
+    '<label class="flabel">Должность</label><select class="search" name="role">' + opt(info.roles, 'Выберите должность') + '</select>' +
+    '<label class="flabel">Объект</label><select class="search" name="object">' + opt(info.objects, 'Выберите объект') + '</select>' +
+    '<button class="btn" style="margin-top:12px">Отправить анкету</button></form></div>';
+  document.getElementById('reg').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const f = ev.target, btn = f.querySelector('button');
+    const form = { name: f.name.value.trim(), age: f.age.value.trim(), role: f.role.value, object: f.object.value };
+    if (form.name.split(/\s+/).length < 2) return toast('Напишите фамилию и имя');
+    if (!form.age) return toast('Укажите возраст');
+    if (!form.role || !form.object) return toast('Выберите должность и объект');
+    btn.disabled = true; btn.textContent = 'Отправляем…';
+    try {
+      const r = await api('register', form);
+      haptic('success');
+      if (r.status === 'Активен') return location.reload();
+      errorScreen('PENDING');
+    } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = 'Отправить анкету'; }
+  });
+}
+
 async function loadContent() {
   const r = await fetch('content.json?t=' + Math.floor(Date.now() / 60000), { cache: 'no-cache' });
   if (!r.ok) throw new Error('content');
@@ -766,8 +803,8 @@ async function refreshBoot() {
   } catch (e) { /* остаёмся на сохранённых данных */ }
 }
 function errorScreen(msg) {
-  if (msg === 'NOT_REGISTERED') return screen('Вы ещё не зарегистрированы', 'Вернитесь в бот и нажмите /start — бот задаст 4 вопроса, а администратор откроет доступ.', true);
-  if (msg === 'PENDING') return screen('Заявка на рассмотрении', 'Администратор скоро проверит анкету — бот напишет, когда доступ откроется.', true);
+  if (msg === 'NOT_REGISTERED') return regForm();
+  if (msg === 'PENDING') return screen('Анкета отправлена', 'Администратор скоро её проверит — бот напишет, когда доступ откроется. Обычно это занимает несколько минут.', true);
   if (msg === 'NO_ACCESS') return screen('Доступ закрыт', 'Если это ошибка — обратитесь к управляющему.', true);
   if (msg === 'NO_TELEGRAM' || msg === 'EXPIRED') return screen('Откройте через Telegram', 'Платформа работает внутри Telegram: откройте бот и нажмите кнопку «Обучение».', false);
   screen('Не получилось загрузить', esc(msg) + '<br><br><button class="btn" style="max-width:220px;margin:0 auto" onclick="location.reload()">Повторить</button>');
