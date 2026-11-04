@@ -51,8 +51,10 @@ def split_list(v):
     return [x.strip() for x in re.split(r'[,;]', v) if x.strip()]
 
 
-def parse(path):
-    text = path.read_text(encoding='utf-8').replace('\r\n', '\n')
+def parse(path, text=None):
+    if text is None:
+        text = path.read_text(encoding='utf-8')
+    text = text.replace('\r\n', '\n')
     meta, body = {}, text
     m = re.match(r'^---\n(.*?)\n---\n?(.*)$', text, re.S)
     if m:
@@ -210,17 +212,28 @@ def places(meta):
     return meta.get('projects', []) + meta.get('objects', [])
 
 
+def entries(folder):
+    """Файлы папки: обычный .md = одна запись (ID = имя файла); *.cards.md = много записей,
+    каждая начинается строкой «=== id ===» и дальше как обычный файл (шапка --- … --- и текст)."""
+    for p in sorted(folder.rglob('*.md')):
+        if p.name.lower() == 'readme.md' or p.name.startswith('_'):
+            continue
+        if p.name.endswith('.cards.md'):
+            parts = re.split(r'^=== *([\w-]+) *===[ \t]*$\n?', p.read_text(encoding='utf-8').replace('\r\n', '\n'), flags=re.M)
+            for i in range(1, len(parts) - 1, 2):
+                yield p, parts[i].strip(), parts[i + 1].strip() + '\n'
+        else:
+            yield p, p.stem.strip(), None
+
+
 def build():
     cards, materials, programs = [], [], []
     ids = {}
     for folder, kind in (('menu', 'card'), ('materials', 'material'), ('programs', 'program')):
-        for p in sorted((CONTENT / folder).rglob('*.md')):
-            if p.name.lower() == 'readme.md' or p.name.startswith('_'):
-                continue
-            raw, meta, body = parse(p)
+        for p, pid, chunk in entries(CONTENT / folder):
+            raw, meta, body = parse(p, chunk)
             if str(meta.get('hidden', '')).lower() in ('да', 'yes', 'true', '1'):
                 continue
-            pid = p.stem.strip()
             if not re.match(r'^[\w-]+$', pid):
                 errors.append(f'{rel(p)}: имя файла — только буквы, цифры, «-» и «_» (без пробелов)')
                 continue

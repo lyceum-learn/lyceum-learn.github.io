@@ -12,8 +12,8 @@
 - [[otkrytie-smeny]]
 
 ## День 2–3 — меню
-- [[syrniki]]
-- [[granola]]
+- [[syrniki-s-kokosovym-kremom-kofeynoy-karamelyu-i]]
+- [[kasha-ovsyanaya-s-inzhirom]]
 - [[allergeny-gostyu]]
 - тест: T01
 
