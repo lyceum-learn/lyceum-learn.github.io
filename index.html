@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Обучение «Лицей»</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="config.js"></script>
+<style>
+:root {
+  --bg: #FFFFFF; --surface-2: #F6F5F3; --ink: #1A1A1A; --muted: #707070; --line: #ECEAE6;
+  --accent: #ED272E; --accent-dark: #C81E25; --accent-soft: #FDEBEC; --ok: #1F8A4C; --ok-soft: #E6F4EC; --warn: #B76E00; --warn-soft: #FFF3DC;
+  --gold: #E9A400; --r: 16px; --shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.06);
+  --serif: 'Cormorant Garamond', Georgia, serif; --sans: 'Manrope', system-ui, -apple-system, sans-serif;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--sans); -webkit-font-smoothing: antialiased; min-height: 100vh; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; padding: 0; }
+button:disabled { cursor: default; opacity: .45; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+#app { max-width: 640px; margin: 0 auto; padding-bottom: calc(76px + var(--safe-b)); }
+.view { padding: 0 16px 24px; }
+.view.anim { animation: fade .18s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* шапка главной */
+.hero { background: var(--accent); color: #fff; margin: 0 -16px 18px; padding: 18px 18px 22px; border-radius: 0 0 26px 26px; position: relative; overflow: hidden; }
+.hero .logo { width: 92px; height: auto; color: #fff; display: block; }
+.hero .top { display: flex; justify-content: space-between; align-items: center; }
+.hero .me { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.16); border-radius: 99px; padding: 5px 12px 5px 5px; font-size: 13px; font-weight: 600; color: #fff; }
+.hero .ava { width: 26px; height: 26px; border-radius: 50%; background: #fff; color: var(--accent); display: grid; place-items: center; font-weight: 800; font-size: 12px; }
+.hero h1 { font: 600 30px/1.1 var(--serif); margin: 18px 0 2px; }
+.hero .sub { opacity: .85; font-size: 13px; }
+.hero .stats { display: flex; gap: 10px; margin-top: 16px; }
+.hero .stat { flex: 1; background: rgba(255,255,255,.14); border-radius: 14px; padding: 10px 12px; }
+.hero .stat b { display: block; font-size: 22px; line-height: 1.1; }
+.hero .stat span { font-size: 12px; opacity: .85; }
+.hero .bar { height: 6px; border-radius: 9px; background: rgba(255,255,255,.25); margin-top: 8px; overflow: hidden; }
+.hero .bar i { display: block; height: 100%; background: #fff; border-radius: 9px; }
+.hero .ornament { position: absolute; right: -60px; top: -50px; width: 200px; opacity: .12; color: #fff; pointer-events: none; }
+
+/* заголовки */
+.head { display: flex; align-items: center; gap: 10px; padding: 16px 0 12px; position: sticky; top: 0; background: var(--bg); z-index: 5; }
+.head h2 { font: 600 26px/1.1 var(--serif); margin: 0; flex: 1; }
+.back { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; flex: none; }
+.sec { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 22px 0 10px; }
+
+/* списки и карточки */
+.list { display: grid; gap: 10px; }
+.row { display: flex; gap: 12px; align-items: center; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; text-align: left; width: 100%; }
+.row .ic { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; font-size: 19px; flex: none; }
+.row .tx { flex: 1; min-width: 0; }
+.row .tt { font-weight: 600; }
+.row .mt { font-size: 13px; color: var(--muted); margin-top: 1px; }
+.row .chev { color: #C9C6C0; flex: none; }
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.chip.red { background: var(--accent-soft); color: var(--accent-dark); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.gold { background: #FFF6DB; color: #8A6100; }
+.empty { color: var(--muted); text-align: center; padding: 30px 10px; font-size: 14px; }
+.pbar { height: 5px; background: var(--line); border-radius: 9px; overflow: hidden; margin-top: 7px; }
+.pbar i { display: block; height: 100%; background: var(--accent); border-radius: 9px; }
+
+/* меню */
+.search { width: 100%; border: 1px solid var(--line); background: var(--surface-2); border-radius: 12px; padding: 11px 14px; outline: none; font-size: 16px; }
+.search:focus { border-color: var(--accent); background: #fff; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0 2px; scrollbar-width: none; margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+.chips::-webkit-scrollbar { display: none; }
+.fchip { flex: none; border: 1px solid var(--line); border-radius: 99px; padding: 6px 12px; font-size: 13px; font-weight: 600; background: #fff; }
+.fchip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.fchip.no.on { background: var(--accent); border-color: var(--accent); }
+.flabel { font-size: 12px; color: var(--muted); margin-top: 10px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.card { text-align: left; border-radius: var(--r); overflow: hidden; background: #fff; box-shadow: var(--shadow); border: 1px solid var(--line); display: flex; flex-direction: column; }
+.ph { aspect-ratio: 4/3; background: var(--surface-2); display: grid; place-items: center; position: relative; overflow: hidden; }
+.ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ph .ini { font: 600 40px var(--serif); color: var(--accent); opacity: .55; }
+.ph .badge { position: absolute; top: 8px; left: 8px; }
+.card .cb { padding: 9px 11px 11px; }
+.card .ct { font-weight: 700; font-size: 14px; line-height: 1.3; }
+.al { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.al span { font-size: 11px; font-weight: 600; color: var(--accent-dark); background: var(--accent-soft); border-radius: 6px; padding: 1px 6px; }
+
+/* детали */
+.big-ph { margin: 0 -16px 14px; aspect-ratio: 4/3; background: var(--surface-2); display: grid; place-items: center; overflow: hidden; }
+.big-ph img { width: 100%; height: 100%; object-fit: cover; }
+.big-ph .ini { font: 600 80px var(--serif); color: var(--accent); opacity: .4; }
+.lead { color: var(--muted); margin: 4px 0 12px; }
+.facts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.prose { font-size: 15px; line-height: 1.6; }
+.prose h2, .prose h3 { font: 600 22px/1.2 var(--serif); margin: 20px 0 8px; }
+.prose h4, .prose h5 { font-size: 16px; margin: 16px 0 6px; }
+.prose p { margin: 0 0 10px; }
+.prose ul, .prose ol { padding-left: 20px; margin: 0 0 12px; }
+.prose li { margin: 4px 0; }
+.prose img { max-width: 100%; border-radius: 12px; display: block; margin: 8px 0; }
+.prose blockquote { margin: 12px 0; padding: 10px 14px; background: var(--warn-soft); border-radius: 12px; color: #5C3E00; }
+.prose .tbl { overflow-x: auto; margin: 8px 0 14px; }
+.prose table { border-collapse: collapse; font-size: 14px; min-width: 100%; }
+.prose th, .prose td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+.prose th { background: var(--surface-2); font-weight: 700; }
+.prose a[data-ref] { font-weight: 600; text-decoration: underline; cursor: pointer; }
+.prose code { background: var(--surface-2); padding: 1px 5px; border-radius: 5px; font-size: 13px; }
+.prose hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
+.prose li.check { list-style: none; margin-left: -20px; display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; user-select: none; }
+.prose li.check .box { width: 22px; height: 22px; border: 2px solid #CFCBC4; border-radius: 7px; flex: none; display: grid; place-items: center; margin-top: 1px; }
+.prose li.check.on { background: var(--ok-soft); border-color: transparent; }
+.prose li.check.on .box { background: var(--ok); border-color: var(--ok); }
+.prose li.check.on .box::after { content: ''; width: 6px; height: 11px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg) translate(-1px, -1px); }
+
+/* кнопки */
+.btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border-radius: 14px; padding: 14px; font-weight: 700; background: var(--accent); color: #fff; }
+.btn:active { background: var(--accent-dark); }
+.btn.ghost { background: var(--surface-2); color: var(--ink); }
+.btn.okb { background: var(--ok); }
+.btns { display: flex; gap: 10px; margin-top: 18px; }
+.sticky-act { position: sticky; bottom: calc(76px + var(--safe-b)); padding: 12px 0 4px; background: linear-gradient(transparent, #fff 30%); }
+
+/* тест */
+.qprog { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.qprog .pbar { flex: 1; margin: 0; }
+.qtext { font-size: 19px; font-weight: 700; line-height: 1.35; margin: 18px 0 6px; }
+.qhint { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+.qimg { width: 100%; border-radius: 14px; margin: 6px 0 12px; }
+.opt { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; border: 1.5px solid var(--line); border-radius: 14px; padding: 13px 14px; margin-bottom: 9px; background: #fff; }
+.opt .mk { width: 22px; height: 22px; border: 2px solid #CFCBC4; border-radius: 50%; flex: none; display: grid; place-items: center; }
+.opt.multi .mk { border-radius: 7px; }
+.opt.on { border-color: var(--accent); background: var(--accent-soft); }
+.opt.on .mk { border-color: var(--accent); background: var(--accent); }
+.opt.on .mk::after { content: ''; width: 8px; height: 8px; background: #fff; border-radius: 50%; }
+.opt.multi.on .mk::after { width: 5px; height: 10px; background: none; border: solid #fff; border-width: 0 2.5px 2.5px 0; border-radius: 0; transform: rotate(45deg) translate(-1px, -1px); }
+.result { text-align: center; padding: 26px 0 10px; }
+.result .pct { font: 600 72px/1 var(--serif); }
+.result .pct.ok { color: var(--ok); }
+.result .pct.bad { color: var(--accent); }
+.result .verdict { font-weight: 700; font-size: 18px; margin-top: 8px; }
+.result .earned { display: inline-flex; gap: 6px; margin-top: 14px; background: #FFF6DB; color: #8A6100; padding: 8px 16px; border-radius: 99px; font-weight: 800; animation: pop .5s ease; }
+@keyframes pop { 0% { transform: scale(.4); opacity: 0; } 70% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+.rv { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 9px; }
+.rv.bad { border-color: #F5C2C4; background: #FFF8F8; }
+.rv .q { font-weight: 600; }
+.rv .a { font-size: 14px; margin-top: 6px; }
+.rv .a b { font-weight: 700; }
+.rv .x { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+/* тренировка карточек */
+.flash { border-radius: 22px; box-shadow: var(--shadow); border: 1px solid var(--line); overflow: hidden; margin-top: 6px; }
+.flash .ph { aspect-ratio: 16/10; }
+.flash .fb { padding: 16px; }
+.flash h3 { font: 600 26px/1.15 var(--serif); margin: 0 0 4px; }
+
+/* призы */
+.wallet { display: flex; align-items: center; justify-content: space-between; background: #FFF6DB; border-radius: var(--r); padding: 16px 18px; }
+.wallet b { font-size: 30px; color: #8A6100; }
+.prize { border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: flex; flex-direction: column; background: #fff; }
+.prize .ph { aspect-ratio: 1; font-size: 44px; }
+.prize .pb { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.prize .pt { font-weight: 700; font-size: 14px; line-height: 1.3; }
+.prize .pd { font-size: 12px; color: var(--muted); flex: 1; }
+.prize .btn { padding: 9px; font-size: 14px; border-radius: 11px; }
+
+/* ранги */
+.ladder { display: grid; gap: 6px; }
+.rung { display: flex; justify-content: space-between; padding: 10px 14px; border-radius: 12px; background: var(--surface-2); font-size: 14px; }
+.rung.cur { background: var(--accent); color: #fff; font-weight: 700; }
+.rung.done { color: var(--muted); }
+
+/* нижнее меню */
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,.96); backdrop-filter: blur(10px); border-top: 1px solid var(--line); display: flex; justify-content: center; padding-bottom: var(--safe-b); z-index: 20; }
+.tabs nav { display: flex; width: 100%; max-width: 640px; }
+.tabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 9px 0 8px; font-size: 11px; font-weight: 600; color: var(--muted); }
+.tabs button svg { width: 23px; height: 23px; }
+.tabs button.on { color: var(--accent); }
+
+/* служебное */
+.center { min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; gap: 14px; }
+.center .logo { width: 140px; color: var(--accent); }
+.center h2 { font: 600 28px/1.15 var(--serif); margin: 6px 0 0; }
+.center p { color: var(--muted); margin: 0; max-width: 320px; }
+.spin { width: 28px; height: 28px; border: 3px solid var(--accent-soft); border-top-color: var(--accent); border-radius: 50%; animation: sp 0.8s linear infinite; }
+@keyframes sp { to { transform: rotate(360deg); } }
+.toast { position: fixed; left: 50%; bottom: calc(92px + var(--safe-b)); transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; z-index: 50; max-width: 90vw; animation: fade .2s; }
+.toast.gold { background: #8A6100; }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: flex-end; justify-content: center; z-index: 60; }
+.modal .sheet { background: #fff; width: 100%; max-width: 640px; border-radius: 22px 22px 0 0; padding: 22px 18px calc(18px + var(--safe-b)); animation: up .2s ease; }
+@keyframes up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.modal h3 { font: 600 24px var(--serif); margin: 0 0 6px; }
+.sync { position: fixed; top: 8px; right: 8px; font-size: 11px; color: var(--muted); background: var(--surface-2); border-radius: 99px; padding: 3px 9px; z-index: 30; }
+</style>
+</head>
+<body>
+<div id="app"><div class="center"><div class="spin"></div></div></div>
+<div class="tabs" id="tabs" hidden><nav>
+  <button data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Главная</button>
+  <button data-tab="menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v8a3 3 0 0 0 3 3v7M7 3v6M10 3v8a3 3 0 0 1-3 3M17 21V3c-2 1-3.5 4-3.5 8 0 2 1.5 3 3.5 3"/></svg>Меню</button>
+  <button data-tab="tests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Тесты</button>
+  <button data-tab="materials"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>Материалы</button>
+  <button data-tab="prizes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.1 6.4 20l1.1-6.2L3 9.4l6.2-.9z"/></svg>Звёзды</button>
+</nav></div>
+<template id="logo"><svg class="logo" role="img" aria-label="Лицей" viewBox="0 0 687 254" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M679.1 20.7001C678.5 21.1 621.3 58.1 592.1 71.2C590.5 71.9 589.1 72.5 587.9 73L607.3 37.6L597.3 32.2001C596.9 32.6 556.6 69.8 543.9 80L561.3 48.2001L551.3 42.8C550.9 43.2001 512.8 80.3001 481.2 96.8001C477.1 99.0001 470.2 102.6 466.6 101.5C472.7 97.6001 484.5 90.1001 494 82.5C501.5 76.6 507.6 68.7001 501.2 60.8001C497.4 56.1001 488.5 54 478.2 60.6L478.1 60.7C472.7 64.4 464.6 71.6001 457 87.3001C455.5 90.5001 454.3 93.4001 453.8 96.0001C448.2 99.6001 435 108.8 426.8 114.4L435.8 103.4L426.5 98.0001L409.1 112.1C408.7 112.4 408.3 112.7 407.9 112.9L426.7 80.1001L416.8 74.5C416.4 74.9 375.5 111.6 362.1 122.4L380.2 91.1L370.3 85.5001C369.9 85.8001 332.7 116.9 302.1 136.9C301.9 137 301.8 137.1 301.6 137.2L319.7 105L309.7 99.5001C309.3 99.9001 269.3 136.6 256.2 147.3L274.2 115.5L264.3 110C263.9 110.3 225.6 148.4 192.5 168.3C189.9 169.7 187.8 170.9 186 171.8C199.3 148.3 239.3 77.4001 239.7 76.6001C236.707 74.0945 233.248 71.7478 230.5 69C145 152.5 41.5 219.3 0.899963 244.1L6.59996 253.5C43.7 230.8 133.1 173.2 213.9 99.8001C197 129.6 173.6 171 171.7 174.1C169 178.7 169 182.5 171.6 185.1C175.8 189.4 183.8 187.3 198.1 178.4C210.5 171.3 236.6 150.9 249 137.5L241.1 151.8C237.4 158.3 240.3 161.8 241.7 163C243 164.1 244.6 164.7 246.4 164.7C250.4 164.7 255.7 162 262.9 156.3C268.7 151.7 283.9 138 295.6 127.4L287.2 140.8C283.8 146.7 286 150.1 287.5 151.5C288.9 152.8 290.5 153.4 292.4 153.4C296.6 153.4 302.1 150.4 309.3 145.7C325.3 135.2 342.6 122 355.7 111.6L347.1 126.8C343.4 133.3 346.3 136.8 347.7 138C349 139.1 350.6 139.7 352.4 139.7C356.4 139.7 361.7 137 368.9 131.3C374.8 126.7 389.9 113.1 401.9 102.5L393.8 115.4C390.1 121.9 393.4 125.5 394.5 126.5C398.1 129.7 404 128.2 412.2 123.1L410.9 125.6C405.8 129.1 403 130.7 402 131.4C396.1 136 395.1 141.4 396.1 145C397 148.2 399.5 150.4 402.6 150.8C402.9 150.8 403.3 150.9 403.6 150.9C406.1 150.9 410.1 149.7 413.6 143.6L419.6 132.9C422.8 130.7 426.4 128.3 429.9 125.8C439.1 119.5 449 112.7 456.2 107.7C457.6 109.4 459.8 111.1 463.1 112.2C464.8 112.7 466.5 113 468.2 113C474.8 113 481.4 109.5 486.5 106.9C503.4 98.1 524.8 80.2 538.6 68.5L529 84.3C525.4 90.8 528.3 94.2001 529.7 95.4C531 96.5 532.6 97.1 534.4 97.1C538.4 97.1 543.7 94.4 550.9 88.7001C556.8 84.1001 570.6 70.8 582.2 60.4001L575.4 73.1001C572.4 78.5001 573.7 81.7 575.4 83.5C576.9 85.1001 578.7 85.9 581 85.9C584.8 85.9 590.1 83.9001 597.8 80.4001C627.8 66.9001 684 30.6 686.4 29.1L679.1 20.7001ZM485.4 69.8C487.9 68.1001 491.2 67.1 492 68.2C492.8 69.3 490.4 71.6001 488.1 73.3C486.3 74.7001 468.5 87.5001 468.5 87.5001C474.3 78.6001 482.7 71.7001 485.4 69.8Z" fill="currentColor"/>
+<path d="M604.2 6.40005L594.3 0.800049C578.5 15.6 569 32.2001 568.5 33L578.1 38.3C578.2 38.1 588.2 20.6 604.2 6.40005Z" fill="currentColor"/>
+</svg></template>
+<script>
+'use strict';
+const TG = window.Telegram && Telegram.WebApp;
+const DEV = (() => { try { return window.parent !== window && window.parent.LEARN_DEV; } catch (e) { return null; } })();
+const API = window.LEARN_API || '';
+const $app = document.getElementById('app');
+const logo = () => document.getElementById('logo').innerHTML;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const norm = s => String(s || '').trim().toLowerCase().replace(/ё/g, 'е');
+const plural = (n, a, b, c) => { const m = n % 10, h = n % 100; return m === 1 && h !== 11 ? a : m >= 2 && m <= 4 && (h < 10 || h >= 20) ? b : c; };
+
+let B = null;          // данные пользователя из таблицы
+let C = { cards: [], materials: [], programs: [] }; // материалы с GitHub
+let stack = [];        // история экранов
+let tab = 'home';
+let menuF = { q: '', cat: '', no: [], repeat: false };
+const initData = DEV ? DEV.initData : (TG && TG.initData) || '';
+const uid = (() => { try { return JSON.parse(new URLSearchParams(initData).get('user')).id; } catch (e) { return 'x'; } })();
+const LS = { boot: 'learn-boot-' + uid, queue: 'learn-q-' + uid, run: 'learn-run-' + uid };
+const ls = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
+
+// ---------- связь с таблицей ----------
+async function api(fn, ...args) {
+  if (DEV) return DEV.call(fn, [initData, ...args]);
+  if (!API) throw new Error('Не задан адрес сервера (config.js)');
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 40000);
+  try {
+    const r = await fetch(API, { method: 'POST', body: JSON.stringify({ fn, args: [initData, ...args] }), signal: ctl.signal });
+    const j = await r.json();
+    if (j.error) { const e = new Error(j.error); e.server = true; throw e; }
+    return j.result;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Сервер долго не отвечает — попробуйте ещё раз');
+    if (!e.server) throw new Error('Нет связи. Проверьте интернет');
+    throw e;
+  } finally { clearTimeout(t); }
+}
+
+// отметки (знаю/прочитано/чек-лист) — сразу на экране, на сервер очередью: не теряются без связи
+let flushing = false;
+function queueMark(type, id, status, details) {
+  const q = ls.get(LS.queue, []).filter(x => !(x.type === type && x.id === id));
+  q.push({ type, id, status, details: details || '' });
+  ls.set(LS.queue, q);
+  B.progress[type + ':' + id] = { status, details: details || '', at: '' };
+  ls.set(LS.boot, B);
+  flush();
+}
+async function flush() {
+  if (flushing) return;
+  flushing = true;
+  try {
+    let q = ls.get(LS.queue, []);
+    while (q.length) {
+      const m = q[0];
+      const r = await api('mark', m.type, m.id, m.status, m.details);
+      q = ls.get(LS.queue, []).filter(x => !(x.type === m.type && x.id === m.id && x.status === m.status && x.details === m.details));
+      ls.set(LS.queue, q);
+      if (r && r.balance) { B.stars = r.balance; ls.set(LS.boot, B); }
+      if (r && r.stars > 0) { toast('+' + r.stars + ' ⭐', true); haptic('success'); refreshBoot(); }
+    }
+    syncBadge(false);
+  } catch (e) {
+    syncBadge(true);
+    setTimeout(() => { flushing = false; flush(); }, 15000);
+    return;
+  }
+  flushing = false;
+}
+function syncBadge(on) {
+  let el = document.getElementById('sync');
+  if (!on) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'sync'; el.className = 'sync'; document.body.appendChild(el); }
+  el.textContent = 'Нет связи — отметки сохранены';
+}
+
+// ---------- доступ к материалам по должности и проекту ----------
+function fits(x) {
+  if (!B || B.me.admin) return true;
+  const roles = (x.roles || []).map(norm), places = (x.places || []).map(norm);
+  const okR = !roles.length || roles.includes('все') || roles.includes(norm(B.me.role));
+  const okP = !places.length || places.includes('все') || places.includes(norm(B.me.object)) || places.includes(norm(B.me.project));
+  return okR && okP;
+}
+const cards = () => C.cards.filter(fits);
+const materials = () => C.materials.filter(fits);
+const programs = () => C.programs.filter(fits);
+const byId = id => C.cards.concat(C.materials, C.programs).find(x => x.id === id);
+const prog = (type, id) => (B.progress[type + ':' + id] || {}).status || '';
+const checked = id => { const p = B.progress['checklist:' + id]; return p && p.details ? p.details.split(',').filter(String).map(Number) : []; };
+
+function stepDone(p, s) {
+  if (s.test) { const t = B.tests.find(x => x.id === s.test); return !!(t && t.stat && t.stat.passed); }
+  if (s.ref) {
+    const r = byId(s.ref);
+    if (r && r.type === 'checklist') return checked(r.id).length >= r.items.length;
+    if (r && r.type === 'card') return prog('card', r.id) === 'знаю';
+    if (prog('material', s.ref) === 'прочитано') return true;
+  }
+  return prog('step', p.id + ':' + s.key) === 'выполнено';
+}
+function progPct(p) {
+  const steps = p.days.flatMap(d => d.steps);
+  return steps.length ? Math.round(steps.filter(s => stepDone(p, s)).length / steps.length * 100) : 0;
+}
+
+// ---------- навигация ----------
+function go(view, arg, replace) {
+  if (replace) stack.pop();
+  stack.push({ view, arg, y: 0 });
+  render(true);
+}
+function back() {
+  if (stack.length > 1) { stack.pop(); render(false); }
+}
+function setTab(t) {
+  tab = t;
+  stack = [{ view: t, arg: null, y: 0 }];
+  render(true);
+}
+function render(top) {
+  const cur = stack[stack.length - 1];
+  const fn = VIEWS[cur.view] || VIEWS.home;
+  $app.innerHTML = '<div class="view' + (top ? ' anim' : '') + '">' + fn(cur.arg) + '</div>';
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  if (TG && TG.BackButton) { if (stack.length > 1) TG.BackButton.show(); else TG.BackButton.hide(); }
+  window.scrollTo(0, top ? 0 : cur.y || 0);
+  if (AFTER[cur.view]) AFTER[cur.view](cur.arg);
+}
+window.addEventListener('scroll', () => { const c = stack[stack.length - 1]; if (c) c.y = window.scrollY; }, { passive: true });
+document.getElementById('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) { haptic('light'); setTab(b.dataset.tab); } });
+$app.addEventListener('click', e => {
+  const el = e.target.closest('[data-go],[data-act],a[data-ref]');
+  if (!el) return;
+  if (el.matches('a[data-ref]')) { e.preventDefault(); openItem(el.dataset.ref); return; }
+  if (el.dataset.go) { go(el.dataset.go, el.dataset.arg || null); return; }
+  ACT[el.dataset.act] && ACT[el.dataset.act](el, e);
+});
+function openItem(id) {
+  const x = byId(id);
+  if (!x) { const t = B.tests.find(t => t.id === id); if (t) return go('test', id); toast('Материал не найден'); return; }
+  go(x.type === 'card' ? 'card' : x.type === 'program' ? 'program' : 'material', id);
+}
+const head = (title, noBack) => '<div class="head">' + (noBack || stack.length < 2 ? '' :
+  '<button class="back" data-act="back" aria-label="Назад"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button>') +
+  '<h2>' + esc(title) + '</h2></div>';
+const chev = '<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>';
+const initials = s => esc(String(s || '?').replace(/[«»"(]/g, '').trim().charAt(0).toUpperCase());
+const photo = (x, cls) => '<div class="' + (cls || 'ph') + '">' + (x.photo ? '<img src="' + esc(x.photo) + '" alt="" loading="lazy">' : '<span class="ini">' + initials(x.title) + '</span>') + '</div>';
+
+// ---------- экраны ----------
+const VIEWS = {}, AFTER = {}, ACT = {};
+ACT.back = back;
+
+VIEWS.home = () => {
+  const r = B.rank, st = B.stars;
+  const nextPct = r.next ? Math.min(100, Math.round((st.earned - r.from) / Math.max(1, r.next.from - r.from) * 100)) : 100;
+  const first = String(B.me.name).split(/\s+/)[1] || B.me.name;
+  let h = '<div class="hero">' + '<div class="ornament">' + logo() + '</div>' +
+    '<div class="top">' + logo() + '<button class="me" data-go="profile"><span class="ava">' + initials(first) + '</span>Профиль</button></div>' +
+    '<h1>Привет, ' + esc(first) + '!</h1><div class="sub">' + esc(B.me.role) + ' · ' + esc(B.me.object) + '</div>' +
+    '<div class="stats"><div class="stat"><b>' + st.balance + ' ⭐</b><span>можно потратить</span></div>' +
+    '<div class="stat"><b>' + esc(r.name) + '</b><span>' + (r.next ? 'ещё ' + (r.next.from - st.earned) + ' ⭐ до «' + esc(r.next.name) + '»' : 'высший ранг') + '</span><div class="bar"><i style="width:' + nextPct + '%"></i></div></div></div></div>';
+
+  const asg = B.assignments.map(a => {
+    if (a.kind === 'test') {
+      const t = B.tests.find(x => x.id === a.id);
+      const done = t && t.stat && t.stat.passed;
+      return { done, html: row('📝', a.title, deadlineText(a.deadline, done) + (a.comment ? ' · ' + esc(a.comment) : ''), 'test', a.id, done ? '<span class="chip ok">Сдан</span>' : dlChip(a.deadline)) };
+    }
+    const p = C.programs.find(x => x.id === a.id);
+    const pct = p ? progPct(p) : 0;
+    return { done: pct === 100, html: row('🧭', a.title, pct + '% · ' + deadlineText(a.deadline, pct === 100), 'program', a.id, pct === 100 ? '<span class="chip ok">Готово</span>' : dlChip(a.deadline)) };
+  });
+  const todo = asg.filter(a => !a.done);
+  if (asg.length) h += '<div class="sec">Назначено вам</div><div class="list">' + (todo.length ? todo : asg.slice(0, 3)).map(a => a.html).join('') + '</div>';
+
+  const progs = programs().filter(p => !B.assignments.some(a => a.kind === 'program' && a.id === p.id));
+  if (progs.length) h += '<div class="sec">Программы обучения</div><div class="list">' + progs.map(p => {
+    const pct = progPct(p);
+    return '<button class="row" data-go="program" data-arg="' + esc(p.id) + '"><span class="ic">🧭</span><span class="tx"><div class="tt">' + esc(p.title) + '</div><div class="mt">' + pct + '% пройдено</div><div class="pbar"><i style="width:' + pct + '%"></i></div></span>' + chev + '</button>';
+  }).join('') + '</div>';
+
+  const cs = cards();
+  const rep = cs.filter(c => prog('card', c.id) === 'повторить').length, known = cs.filter(c => prog('card', c.id) === 'знаю').length;
+  h += '<div class="sec">Тренировка</div><div class="list">' +
+    '<button class="row" data-go="flash"><span class="ic">🃏</span><span class="tx"><div class="tt">Карточки меню</div><div class="mt">Знаю ' + known + ' из ' + cs.length + (rep ? ' · повторить ' + rep : '') + '</div><div class="pbar"><i style="width:' + (cs.length ? Math.round(known / cs.length * 100) : 0) + '%"></i></div></span>' + chev + '</button>';
+  const notPassed = B.tests.filter(t => !(t.stat && t.stat.passed)).length;
+  h += '<button class="row" data-act="tab" data-tab2="tests"><span class="ic">📝</span><span class="tx"><div class="tt">Тесты</div><div class="mt">' + (notPassed ? 'Не сдано: ' + notPassed + ' из ' + B.tests.length : 'Все сданы 🎉') + '</div></span>' + chev + '</button></div>';
+  return h;
+};
+ACT.tab = el => setTab(el.dataset.tab2);
+function row(ic, title, meta, view, arg, right) {
+  return '<button class="row" data-go="' + view + '" data-arg="' + esc(arg) + '"><span class="ic">' + ic + '</span><span class="tx"><div class="tt">' + esc(title) + '</div>' +
+    (meta ? '<div class="mt">' + meta + '</div>' : '') + '</span>' + (right || '') + chev + '</button>';
+}
+function dayDiff(d) {
+  const m = String(d || '').match(/(\d{2})\.(\d{2})\.(\d{4})/);
+  if (!m) return null;
+  const a = new Date(+m[3], +m[2] - 1, +m[1]), n = new Date(); n.setHours(0, 0, 0, 0);
+  return Math.round((a - n) / 864e5);
+}
+function deadlineText(d, done) { if (!d) return done ? 'выполнено' : 'без срока'; return 'срок ' + d.slice(0, 5); }
+function dlChip(d) {
+  const n = dayDiff(d);
+  if (n === null) return '';
+  if (n < 0) return '<span class="chip red">Просрочено</span>';
+  if (n <= 2) return '<span class="chip warn">' + (n === 0 ? 'Сегодня' : n === 1 ? 'Завтра' : '2 дня') + '</span>';
+  return '';
+}
+
+// меню
+VIEWS.menu = () => {
+  const cs = cards();
+  const cats = [...new Set(cs.map(c => c.category))];
+  const als = [...new Set(cs.flatMap(c => c.allergens))].sort();
+  return head('Меню', true) +
+    '<input class="search" id="q" type="search" placeholder="Поиск: блюдо, ингредиент…" value="' + esc(menuF.q) + '" autocomplete="off">' +
+    '<div class="chips" id="cats"><button class="fchip' + (!menuF.cat ? ' on' : '') + '" data-act="cat" data-v="">Все</button>' +
+    cats.map(c => '<button class="fchip' + (menuF.cat === c ? ' on' : '') + '" data-act="cat" data-v="' + esc(c) + '">' + esc(c) + '</button>').join('') +
+    '<button class="fchip' + (menuF.repeat ? ' on' : '') + '" data-act="rep">🔁 Повторить</button></div>' +
+    (als.length ? '<div class="flabel">Без аллергенов:</div><div class="chips">' + als.map(a => '<button class="fchip no' + (menuF.no.includes(a) ? ' on' : '') + '" data-act="no" data-v="' + esc(a) + '">без: ' + esc(a.toLowerCase()) + '</button>').join('') + '</div>' : '') +
+    '<div id="menuList"></div>';
+};
+AFTER.menu = () => {
+  const q = document.getElementById('q');
+  q.addEventListener('input', () => { menuF.q = q.value; drawMenu(); });
+  drawMenu();
+};
+function drawMenu() {
+  const words = norm(menuF.q).split(/\s+/).filter(String);
+  const list = cards().filter(c => {
+    if (menuF.cat && c.category !== menuF.cat) return false;
+    if (menuF.no.some(a => c.allergens.includes(a))) return false;
+    if (menuF.repeat && prog('card', c.id) !== 'повторить') return false;
+    if (!words.length) return true;
+    const hay = norm(c.title + ' ' + c.summary + ' ' + c.category + ' ' + c.tags.join(' ') + ' ' + c.html.replace(/<[^>]+>/g, ' '));
+    return words.every(w => hay.includes(w));
+  });
+  const el = document.getElementById('menuList');
+  if (!el) return;
+  el.innerHTML = list.length ? '<div class="grid">' + list.map(c => {
+    const st = prog('card', c.id);
+    return '<button class="card" data-go="card" data-arg="' + esc(c.id) + '">' +
+      '<div class="ph">' + (c.photo ? '<img src="' + esc(c.photo) + '" alt="" loading="lazy">' : '<span class="ini">' + initials(c.title) + '</span>') +
+      (st ? '<span class="badge chip ' + (st === 'знаю' ? 'ok' : 'warn') + '">' + (st === 'знаю' ? '✓ Знаю' : '🔁') + '</span>' : '') + '</div>' +
+      '<div class="cb"><div class="ct">' + esc(c.title) + '</div>' + (c.allergens.length ? '<div class="al">' + c.allergens.map(a => '<span>' + esc(a) + '</span>').join('') + '</div>' : '') + '</div></button>';
+  }).join('') + '</div>' : '<div class="empty">Ничего не найдено' + (menuF.no.length ? ' — попробуйте снять фильтр аллергенов' : '') + '</div>';
+}
+ACT.cat = el => { menuF.cat = el.dataset.v; render(false); };
+ACT.no = el => { const v = el.dataset.v; menuF.no = menuF.no.includes(v) ? menuF.no.filter(x => x !== v) : menuF.no.concat(v); render(false); };
+ACT.rep = () => { menuF.repeat = !menuF.repeat; render(false); };
+
+VIEWS.card = id => {
+  const c = byId(id);
+  if (!c) return head('Не найдено') + '<div class="empty">Карточка удалена</div>';
+  const st = prog('card', c.id);
+  return head('') + photo(c, 'big-ph') + '<h2 style="font:600 28px/1.15 var(--serif);margin:0">' + esc(c.title) + '</h2>' +
+    (c.summary ? '<div class="lead">' + esc(c.summary) + '</div>' : '') +
+    '<div class="facts">' + '<span class="chip">' + esc(c.category) + '</span>' + (c.weight ? '<span class="chip">' + esc(c.weight) + '</span>' : '') +
+    (c.price ? '<span class="chip">' + esc(c.price) + ' ₽</span>' : '') + '</div>' +
+    (c.allergens.length ? '<div class="sec" style="margin-top:6px">Аллергены</div><div class="al" style="margin-bottom:14px">' + c.allergens.map(a => '<span style="font-size:13px;padding:3px 9px">' + esc(a) + '</span>').join('') + '</div>' : '<div class="chip ok" style="margin-bottom:14px">Аллергенов нет</div>') +
+    '<div class="prose">' + c.html + '</div>' +
+    '<div class="btns"><button class="btn ghost" data-act="know" data-id="' + esc(c.id) + '" data-v="повторить">' + (st === 'повторить' ? '✓ ' : '') + '🔁 Повторить</button>' +
+    '<button class="btn ' + (st === 'знаю' ? 'okb' : '') + '" data-act="know" data-id="' + esc(c.id) + '" data-v="знаю">' + (st === 'знаю' ? '✓ Знаю' : 'Знаю') + '</button></div>';
+};
+ACT.know = el => { haptic('light'); queueMark('card', el.dataset.id, el.dataset.v); render(false); };
+
+// тренировка: сначала «повторить», затем новые, затем давно отмеченные «знаю»
+let flashQ = [], flashOpen = false;
+VIEWS.flash = () => {
+  if (!flashQ.length) {
+    const cs = cards();
+    const w = c => { const s = prog('card', c.id); return s === 'повторить' ? 0 : !s ? 1 : 2; };
+    flashQ = cs.slice().sort((a, b) => w(a) - w(b) || Math.random() - .5).map(c => c.id);
+    flashOpen = false;
+  }
+  const c = byId(flashQ[0]);
+  if (!c) return head('Карточки меню') + '<div class="empty">Пока нет карточек</div>';
+  return head('Карточки меню') + '<div class="qprog">Осталось ' + flashQ.length + '<div class="pbar"><i style="width:' + Math.round((1 - flashQ.length / Math.max(1, cards().length)) * 100) + '%"></i></div></div>' +
+    '<div class="flash">' + photo(c) + '<div class="fb"><div class="chip" style="margin-bottom:8px">' + esc(c.category) + '</div><h3>' + esc(c.title) + '</h3>' +
+    (flashOpen ? (c.allergens.length ? '<div class="al" style="margin:8px 0 12px">' + c.allergens.map(a => '<span style="font-size:13px;padding:3px 9px">' + esc(a) + '</span>').join('') + '</div>' : '<div class="chip ok" style="margin:8px 0 12px">Аллергенов нет</div>') +
+      '<div class="prose">' + c.html + '</div>' : '<div class="lead">Вспомните состав и аллергены, потом откройте карточку</div>') + '</div></div>' +
+    (flashOpen ? '<div class="btns"><button class="btn ghost" data-act="fl" data-v="повторить">🔁 Повторить</button><button class="btn okb" data-act="fl" data-v="знаю">✓ Знаю</button></div>'
+      : '<div class="btns"><button class="btn" data-act="flopen">Показать состав</button></div>');
+};
+ACT.flopen = () => { flashOpen = true; haptic('light'); render(false); };
+ACT.fl = el => {
+  const id = flashQ.shift();
+  queueMark('card', id, el.dataset.v);
+  if (el.dataset.v === 'повторить' && flashQ.length > 2) flashQ.splice(Math.min(3, flashQ.length), 0, id); // вернётся через пару карточек
+  flashOpen = false;
+  if (!flashQ.length) { toast('Все карточки пройдены 👏'); flashQ = []; back(); return; }
+  render(true);
+};
+
+// тесты
+VIEWS.tests = () => {
+  if (!B.tests.length) return head('Тесты', true) + '<div class="empty">Тестов для вас пока нет</div>';
+  const secs = {};
+  B.tests.forEach(t => (secs[t.section] = secs[t.section] || []).push(t));
+  return head('Тесты', true) + Object.keys(secs).map(s => '<div class="sec">' + esc(s) + '</div><div class="list">' + secs[s].map(t => {
+    const st = t.stat;
+    const chip = st && st.passed ? '<span class="chip ok">' + st.best + '%</span>' : st ? '<span class="chip red">' + st.best + '%</span>' : (t.deadline ? dlChip(t.deadline) : '') || '<span class="chip gold">+' + t.stars + ' ⭐</span>';
+    return row('📝', t.title, t.count + ' ' + plural(t.count, 'вопрос', 'вопроса', 'вопросов') + (t.deadline ? ' · срок ' + t.deadline.slice(0, 5) : ''), 'test', t.id, chip);
+  }).join('') + '</div>').join('');
+};
+
+VIEWS.test = id => {
+  const t = B.tests.find(x => x.id === id);
+  if (!t) return head('Тест') + '<div class="empty">Тест недоступен</div>';
+  const st = t.stat, run = ls.get(LS.run, null);
+  const resume = run && run.test === id;
+  return head(t.title) + (t.desc ? '<p class="lead">' + esc(t.desc) + '</p>' : '') +
+    '<div class="list" style="margin-top:8px">' +
+    '<div class="row"><span class="ic">❓</span><span class="tx"><div class="tt">' + t.count + ' ' + plural(t.count, 'вопрос', 'вопроса', 'вопросов') + '</div><div class="mt">Проходной балл — ' + t.pass + '%</div></span></div>' +
+    '<div class="row"><span class="ic">⭐</span><span class="tx"><div class="tt">+' + t.stars + ' ' + plural(t.stars, 'звезда', 'звезды', 'звёзд') + ' за сдачу</div><div class="mt">Начисляются один раз · бонус за 100% с первой попытки</div></span></div>' +
+    (st ? '<div class="row"><span class="ic">' + (st.passed ? '✅' : '📊') + '</span><span class="tx"><div class="tt">Лучший результат: ' + st.best + '%</div><div class="mt">Попыток: ' + st.attempts + ' · последняя ' + esc(st.last) + '</div></span></div>' : '') +
+    (t.deadline ? '<div class="row"><span class="ic">📅</span><span class="tx"><div class="tt">Срок: ' + esc(t.deadline) + '</div></span>' + dlChip(t.deadline) + '</div>' : '') +
+    '</div><div class="btns" style="flex-direction:column">' +
+    (resume ? '<button class="btn" data-act="resume">Продолжить (вопрос ' + (run.i + 1) + ' из ' + run.questions.length + ')</button>' : '') +
+    '<button class="btn' + (resume ? ' ghost' : '') + '" data-act="start" data-id="' + esc(t.id) + '">' + (st ? 'Пройти ещё раз' : 'Начать тест') + '</button></div>';
+};
+let RUN = null;
+ACT.start = async el => {
+  el.disabled = true; el.textContent = 'Загружаем вопросы…';
+  try {
+    const r = await api('startTest', el.dataset.id);
+    RUN = { test: el.dataset.id, token: r.token, info: r.test, questions: r.questions, answers: {}, i: 0 };
+    ls.set(LS.run, RUN);
+    go('run', null);
+  } catch (e) { toast(e.message); el.disabled = false; el.textContent = 'Начать тест'; }
+};
+ACT.resume = () => { RUN = ls.get(LS.run, null); if (RUN) go('run', null); };
+
+VIEWS.run = () => {
+  if (!RUN) return head('Тест') + '<div class="empty">Тест не начат</div>';
+  const q = RUN.questions[RUN.i], sel = RUN.answers[q.n] || [], n = RUN.questions.length;
+  return head(RUN.info.title) + '<div class="qprog">' + (RUN.i + 1) + ' / ' + n + '<div class="pbar"><i style="width:' + Math.round(RUN.i / n * 100) + '%"></i></div></div>' +
+    '<div class="qtext">' + esc(q.text) + '</div><div class="qhint">' + (q.multi ? 'Выберите все правильные варианты' : 'Выберите один вариант') + '</div>' +
+    (q.photo ? '<img class="qimg" src="' + esc(q.photo) + '" alt="">' : '') +
+    q.opts.map(o => '<button class="opt' + (q.multi ? ' multi' : '') + (sel.includes(o.n) ? ' on' : '') + '" data-act="pick" data-n="' + o.n + '"><span class="mk"></span><span>' + esc(o.text) + '</span></button>').join('') +
+    '<div class="btns">' + (RUN.i ? '<button class="btn ghost" style="flex:0 0 30%" data-act="prev">Назад</button>' : '') +
+    '<button class="btn" data-act="next"' + (sel.length ? '' : ' disabled') + '>' + (RUN.i === n - 1 ? 'Завершить' : 'Далее') + '</button></div>';
+};
+ACT.pick = el => {
+  const q = RUN.questions[RUN.i], n = Number(el.dataset.n);
+  let sel = RUN.answers[q.n] || [];
+  sel = q.multi ? (sel.includes(n) ? sel.filter(x => x !== n) : sel.concat(n)) : [n];
+  RUN.answers[q.n] = sel;
+  ls.set(LS.run, RUN);
+  haptic('light');
+  render(false);
+};
+ACT.prev = () => { RUN.i--; ls.set(LS.run, RUN); render(true); };
+ACT.next = async el => {
+  if (RUN.i < RUN.questions.length - 1) { RUN.i++; ls.set(LS.run, RUN); render(true); return; }
+  el.disabled = true; el.textContent = 'Проверяем…';
+  try {
+    const r = await api('submitTest', RUN.token, RUN.answers);
+    const run = RUN;
+    ls.del(LS.run);
+    RUN = null;
+    haptic(r.passed ? 'success' : 'error');
+    go('result', { r, run }, true);
+    if (r.balance) B.stars = r.balance;
+    refreshBoot();
+  } catch (e) {
+    toast(e.message);
+    if (/устарела|уже сохранена/.test(e.message)) { ls.del(LS.run); RUN = null; back(); return; }
+    el.disabled = false; el.textContent = 'Завершить';
+  }
+};
+VIEWS.result = a => {
+  const { r, run } = a;
+  const bad = r.review.filter(x => !x.ok);
+  const txt = (q, ns) => ns.map(n => { const o = q.opts.find(o => o.n === n); return o ? o.text : n; }).join('; ') || '—';
+  return head(run.info.title) + '<div class="result"><div class="pct ' + (r.passed ? 'ok' : 'bad') + '">' + r.pct + '%</div>' +
+    '<div class="verdict">' + (r.passed ? 'Тест сдан! 🎉' : 'Пока не сдан — нужно ' + r.pass + '%') + '</div>' +
+    '<div class="lead">Верно ' + r.ok + ' из ' + r.total + '</div>' + (r.stars ? '<div class="earned">+' + r.stars + ' ⭐</div>' : '') + '</div>' +
+    (bad.length ? '<div class="sec">Разбор ошибок</div>' + bad.map(x => {
+      const q = run.questions.find(q => q.n === x.n) || { opts: [] };
+      return '<div class="rv bad"><div class="q">' + esc(x.text) + '</div><div class="a">Ваш ответ: ' + esc(txt(q, x.chosen)) + '</div><div class="a"><b>Правильно: ' + esc(txt(q, x.right)) + '</b></div>' + (x.explain ? '<div class="x">' + esc(x.explain) + '</div>' : '') + '</div>';
+    }).join('') : '<div class="empty">Без единой ошибки 👏</div>') +
+    '<div class="btns"><button class="btn ghost" data-act="tab" data-tab2="tests">К тестам</button>' + (r.passed ? '' : '<button class="btn" data-act="start" data-id="' + esc(run.test) + '">Ещё раз</button>') + '</div>';
+};
+
+// материалы
+VIEWS.materials = () => {
+  const ms = materials();
+  if (!ms.length) return head('Материалы', true) + '<div class="empty">Материалов пока нет</div>';
+  const secs = {};
+  ms.forEach(m => (secs[m.section] = secs[m.section] || []).push(m));
+  const ps = programs();
+  return head('Материалы', true) +
+    (ps.length ? '<div class="sec">Программы</div><div class="list">' + ps.map(p => { const pct = progPct(p); return row('🧭', p.title, pct + '% пройдено', 'program', p.id, pct === 100 ? '<span class="chip ok">Готово</span>' : ''); }).join('') + '</div>' : '') +
+    Object.keys(secs).map(s => '<div class="sec">' + esc(s) + '</div><div class="list">' + secs[s].map(m => {
+      if (m.type === 'checklist') {
+        const n = checked(m.id).length, all = m.items.length;
+        return row('☑️', m.title, n + ' из ' + all + ' пунктов' + (m.stars ? ' · +' + m.stars + ' ⭐' : ''), 'material', m.id, n >= all ? '<span class="chip ok">Готово</span>' : '');
+      }
+      const read = prog('material', m.id) === 'прочитано';
+      return row('📄', m.title, esc(m.summary), 'material', m.id, read ? '<span class="chip ok">✓</span>' : '');
+    }).join('') + '</div>').join('');
+};
+VIEWS.material = id => {
+  const m = byId(id);
+  if (!m) return head('Не найдено') + '<div class="empty">Материал удалён</div>';
+  const isCheck = m.type === 'checklist';
+  const read = prog('material', m.id) === 'прочитано';
+  return head(m.title) + (m.summary ? '<p class="lead">' + esc(m.summary) + '</p>' : '') + (m.photo ? photo(m, 'big-ph') : '') +
+    (isCheck ? '<div class="qprog" style="margin-bottom:12px" id="ckp"></div>' : '') +
+    '<div class="prose" id="prose">' + m.html + '</div>' +
+    (isCheck ? '' : '<div class="btns"><button class="btn ' + (read ? 'okb' : '') + '" data-act="read" data-id="' + esc(m.id) + '">' + (read ? '✓ Прочитано' : 'Отметить «Прочитано»') + '</button></div>');
+};
+AFTER.material = id => {
+  const m = byId(id);
+  if (!m || m.type !== 'checklist') return;
+  const prose = document.getElementById('prose');
+  const paint = () => {
+    const on = checked(id);
+    prose.querySelectorAll('li.check').forEach(li => li.classList.toggle('on', on.includes(Number(li.dataset.i))));
+    document.getElementById('ckp').innerHTML = on.length + ' / ' + m.items.length + '<div class="pbar"><i style="width:' + Math.round(on.length / Math.max(1, m.items.length) * 100) + '%"></i></div>';
+  };
+  prose.addEventListener('click', e => {
+    const li = e.target.closest('li.check');
+    if (!li) return;
+    const i = Number(li.dataset.i);
+    let on = checked(id);
+    on = on.includes(i) ? on.filter(x => x !== i) : on.concat(i).sort((a, b) => a - b);
+    haptic('light');
+    queueMark('checklist', id, on.length >= m.items.length ? 'выполнено' : 'в работе', on.join(','));
+    paint();
+    if (on.length >= m.items.length) toast('Чек-лист выполнен ✓');
+  });
+  paint();
+};
+ACT.read = el => { const id = el.dataset.id; queueMark('material', id, prog('material', id) === 'прочитано' ? 'открыт' : 'прочитано'); render(false); };
+
+VIEWS.program = id => {
+  const p = byId(id);
+  if (!p) return head('Не найдено') + '<div class="empty">Программа удалена</div>';
+  const pct = progPct(p);
+  const a = B.assignments.find(x => x.kind === 'program' && x.id === id);
+  return head(p.title) + (p.summary ? '<p class="lead">' + esc(p.summary) + '</p>' : '') +
+    '<div class="qprog">' + pct + '%<div class="pbar"><i style="width:' + pct + '%"></i></div>' + (p.stars ? '<span class="chip gold">+' + p.stars + ' ⭐</span>' : '') + '</div>' +
+    (a && a.deadline ? '<div class="lead" style="margin-top:8px">Срок: ' + esc(a.deadline) + ' ' + dlChip(a.deadline) + '</div>' : '') +
+    (p.html ? '<div class="prose" style="margin-top:12px">' + p.html + '</div>' : '') +
+    p.days.map(d => '<div class="sec">' + esc(d.title) + '</div><div class="list">' + d.steps.map(s => {
+      const done = stepDone(p, s);
+      const ic = done ? '✅' : s.test ? '📝' : s.ref ? (byId(s.ref) || {}).type === 'checklist' ? '☑️' : (byId(s.ref) || {}).type === 'card' ? '🍽' : '📄' : '⬜️';
+      const label = s.test ? (B.tests.find(t => t.id === s.test) || {}).title || s.text : esc(s.text);
+      const attrs = s.test ? 'data-go="test" data-arg="' + esc(s.test) + '"' : s.ref ? 'data-act="ref" data-ref2="' + esc(s.ref) + '"' : 'data-act="step" data-p="' + esc(p.id) + '" data-k="' + esc(s.key) + '"';
+      return '<button class="row" ' + attrs + '><span class="ic">' + ic + '</span><span class="tx"><div class="tt" style="font-weight:' + (done ? 500 : 600) + ';' + (done ? 'color:var(--muted)' : '') + '">' + (s.test ? esc(label) : label) + '</div>' +
+        (s.test ? '<div class="mt">Тест' + (done ? ' сдан' : '') + '</div>' : !s.ref ? '<div class="mt">' + (done ? 'Выполнено' : 'Нажмите, когда выполните') + '</div>' : '') + '</span>' + (s.ref || s.test ? chev : '') + '</button>';
+    }).join('') + '</div>').join('');
+};
+ACT.ref = el => openItem(el.dataset.ref2);
+ACT.step = el => {
+  const key = el.dataset.p + ':' + el.dataset.k;
+  haptic('light');
+  queueMark('step', key, prog('step', key) === 'выполнено' ? '' : 'выполнено');
+  render(false);
+};
+
+// звёзды и призы
+VIEWS.prizes = () => {
+  const st = B.stars;
+  return head('Звёзды и призы', true) +
+    '<div class="wallet"><div><div class="mt" style="color:#8A6100;font-weight:600;font-size:13px">Ваш баланс</div><b>' + st.balance + ' ⭐</b></div>' +
+    '<div style="text-align:right;font-size:13px;color:#8A6100">Ранг: <b style="font-size:15px">' + esc(B.rank.name) + '</b><br>заработано всего ' + st.earned + '</div></div>' +
+    '<div class="sec">Как получить звёзды</div><div class="lead" style="font-size:14px;margin:0">Сдавайте тесты (бонус за 100% с первой попытки), выполняйте чек-листы и проходите программы обучения.</div>' +
+    '<div class="sec">Призы</div>' + (B.prizes.length ? '<div class="grid">' + B.prizes.map(p => {
+      const can = st.balance >= p.price && (p.left === null || p.left > 0);
+      return '<div class="prize">' + (p.photo ? '<div class="ph"><img src="' + esc(p.photo) + '" alt=""></div>' : '<div class="ph">🎁</div>') +
+        '<div class="pb"><div class="pt">' + esc(p.title) + '</div><div class="pd">' + esc(p.desc) + (p.left !== null ? '<br>Осталось: ' + p.left : '') + '</div>' +
+        '<button class="btn" data-act="buy" data-id="' + esc(p.id) + '"' + (can ? '' : ' disabled') + '>' + p.price + ' ⭐</button></div></div>';
+    }).join('') + '</div>' : '<div class="empty">Призов пока нет</div>') +
+    (B.orders.length ? '<div class="sec">Мои заказы</div><div class="list">' + B.orders.map(o => '<div class="row"><span class="ic">🎁</span><span class="tx"><div class="tt">' + esc(o.prize) + '</div><div class="mt">' + esc(o.date) + ' · ' + o.price + ' ⭐</div></span><span class="chip ' + (o.status === 'Выдан' ? 'ok' : o.status === 'Отменён' ? 'red' : 'warn') + '">' + esc(o.status) + '</span></div>').join('') + '</div>' : '');
+};
+ACT.buy = el => {
+  const p = B.prizes.find(x => x.id === el.dataset.id);
+  modal('<h3>' + esc(p.title) + '</h3><p class="lead">Обменять ' + p.price + ' ⭐ на приз? Администратор получит заявку и свяжется с вами.</p>' +
+    '<div class="btns"><button class="btn ghost" data-m="no">Отмена</button><button class="btn" data-m="yes">Обменять</button></div>', async ok => {
+    if (!ok) return;
+    try {
+      const r = await api('buy', p.id);
+      B.stars = r.balance;
+      haptic('success');
+      toast('Заявка отправлена 🎁');
+      await refreshBoot();
+    } catch (e) { toast(e.message); }
+  });
+};
+
+// профиль
+VIEWS.profile = () => {
+  const st = B.stars;
+  return head('Профиль') +
+    '<div class="row" style="border:0;background:var(--surface-2)"><span class="ic" style="background:var(--accent);color:#fff;font-weight:800">' + initials(B.me.name) + '</span><span class="tx"><div class="tt">' + esc(B.me.name) + '</div><div class="mt">' + esc(B.me.role) + ' · ' + esc(B.me.object) + '</div></span></div>' +
+    '<div class="sec">Ранги</div><div class="ladder">' + B.ranks.map(r => '<div class="rung' + (r.name === B.rank.name ? ' cur' : st.earned >= r.from ? ' done' : '') + '"><span>' + esc(r.name) + '</span><span>от ' + r.from + ' ⭐</span></div>').join('') + '</div>' +
+    '<div class="sec">История тестов</div>' + (B.history.length ? '<div class="list">' + B.history.map(h => '<div class="row"><span class="ic">' + (h.passed ? '✅' : '❌') + '</span><span class="tx"><div class="tt">' + esc(h.test) + '</div><div class="mt">' + esc(h.date) + (h.stars ? ' · +' + h.stars + ' ⭐' : '') + '</div></span><span class="chip ' + (h.passed ? 'ok' : 'red') + '">' + h.pct + '%</span></div>').join('') + '</div>' : '<div class="empty">Вы ещё не проходили тесты</div>') +
+    '<div class="sec">Звёзды</div>' + (B.ledger.length ? '<div class="list">' + B.ledger.map(l => '<div class="row"><span class="tx"><div class="tt" style="font-weight:500">' + esc(l.reason) + '</div><div class="mt">' + esc(l.date) + '</div></span><span class="chip ' + (l.stars > 0 ? 'gold' : '') + '">' + (l.stars > 0 ? '+' : '') + l.stars + ' ⭐</span></div>').join('') + '</div>' : '<div class="empty">Пока нет</div>');
+};
+
+// ---------- мелочи интерфейса ----------
+function toast(text, gold) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const el = document.createElement('div');
+  el.className = 'toast' + (gold ? ' gold' : '');
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+function modal(html, cb) {
+  const el = document.createElement('div');
+  el.className = 'modal';
+  el.innerHTML = '<div class="sheet">' + html + '</div>';
+  el.addEventListener('click', e => {
+    const b = e.target.closest('[data-m]');
+    if (e.target === el || b) { el.remove(); cb(b && b.dataset.m === 'yes'); }
+  });
+  document.body.appendChild(el);
+}
+function haptic(kind) {
+  try {
+    if (!TG || !TG.HapticFeedback) return;
+    if (kind === 'success' || kind === 'error') TG.HapticFeedback.notificationOccurred(kind); else TG.HapticFeedback.impactOccurred(kind);
+  } catch (e) {}
+}
+function screen(title, text, closeBtn) {
+  document.getElementById('tabs').hidden = true;
+  $app.innerHTML = '<div class="center">' + logo() + '<h2>' + esc(title) + '</h2><p>' + text + '</p>' +
+    (closeBtn && TG && TG.close ? '<button class="btn" style="max-width:260px" onclick="Telegram.WebApp.close()">Вернуться в бот</button>' : '') + '</div>';
+}
+
+// ---------- запуск ----------
+async function loadContent() {
+  const r = await fetch('content.json?t=' + Math.floor(Date.now() / 60000), { cache: 'no-cache' });
+  if (!r.ok) throw new Error('content');
+  C = await r.json();
+}
+async function refreshBoot() {
+  try {
+    B = await api('boot');
+    ls.set(LS.boot, B);
+    const cur = stack[stack.length - 1];
+    if (cur && !['run', 'result'].includes(cur.view)) render(false);
+  } catch (e) { /* остаёмся на сохранённых данных */ }
+}
+function errorScreen(msg) {
+  if (msg === 'NOT_REGISTERED') return screen('Вы ещё не зарегистрированы', 'Вернитесь в бот и нажмите /start — бот задаст 4 вопроса, а администратор откроет доступ.', true);
+  if (msg === 'PENDING') return screen('Заявка на рассмотрении', 'Администратор скоро проверит анкету — бот напишет, когда доступ откроется.', true);
+  if (msg === 'NO_ACCESS') return screen('Доступ закрыт', 'Если это ошибка — обратитесь к управляющему.', true);
+  if (msg === 'NO_TELEGRAM' || msg === 'EXPIRED') return screen('Откройте через Telegram', 'Платформа работает внутри Telegram: откройте бот и нажмите кнопку «Обучение».', false);
+  screen('Не получилось загрузить', esc(msg) + '<br><br><button class="btn" style="max-width:220px;margin:0 auto" onclick="location.reload()">Повторить</button>');
+}
+function openFromLink() {
+  // ссылка из бота: ?open=test-T01 / program-<id> / card-<id> / material-<id> / checklist-<id>
+  const open = new URLSearchParams(location.search).get('open') || (TG && TG.initDataUnsafe && TG.initDataUnsafe.start_param) || '';
+  const m = open.match(/^(test|program|card|material|checklist)-(.+)$/);
+  if (!m) return;
+  const view = m[1] === 'checklist' ? 'material' : m[1];
+  const t = { test: 'tests', program: 'materials', card: 'menu', material: 'materials' }[view];
+  tab = t;
+  stack = [{ view: t, arg: null, y: 0 }, { view, arg: m[2], y: 0 }];
+}
+
+(async function start() {
+  if (TG) {
+    try {
+      TG.ready(); TG.expand();
+      TG.setHeaderColor && TG.setHeaderColor('#ffffff');
+      TG.setBackgroundColor && TG.setBackgroundColor('#ffffff');
+      TG.BackButton && TG.BackButton.onClick(back);
+    } catch (e) {}
+  }
+  if (!initData) return errorScreen('NO_TELEGRAM');
+  const cached = ls.get(LS.boot, null);
+  const contentP = loadContent().catch(() => null);
+  const bootP = api('boot').then(b => { B = b; ls.set(LS.boot, b); return b; });
+  try {
+    if (cached) { B = cached; await contentP; bootP.then(() => render(false)).catch(e => { if (/^[A-Z_]+$/.test(e.message)) errorScreen(e.message); }); }
+    else { await Promise.all([contentP, bootP]); }
+  } catch (e) { return errorScreen(e.message); }
+  document.getElementById('tabs').hidden = false;
+  stack = [{ view: 'home', arg: null, y: 0 }];
+  openFromLink();
+  render(true);
+  flush();
+})();
+</script>
+</body>
+</html>
