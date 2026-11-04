@@ -606,8 +606,8 @@ VIEWS.result = a => {
 
 // материалы
 VIEWS.materials = () => {
-  const ms = materials();
-  if (!ms.length) return head('Материалы', true) + '<div class="empty">Материалов пока нет</div>';
+  const ms = materials().concat((B.pdfs || []).map(x => ({ ...x, type: 'pdf' })));
+  if (!ms.length && !programs().length) return head('Материалы', true) + '<div class="empty">Материалов пока нет</div>';
   const secs = {};
   ms.forEach(m => (secs[m.section] = secs[m.section] || []).push(m));
   const ps = programs();
@@ -618,10 +618,79 @@ VIEWS.materials = () => {
         const n = checked(m.id).length, all = m.items.length;
         return row('☑️', m.title, n + ' из ' + all + ' пунктов' + (m.stars ? ' · +' + m.stars + ' ⭐' : ''), 'material', m.id, n >= all ? '<span class="chip ok">Готово</span>' : '');
       }
+      if (m.type === 'pdf') {
+        const read = prog('material', 'pdf:' + m.id) === 'прочитано';
+        return row('📕', m.title, 'PDF · ' + fmtSize(m.size), 'pdf', m.id, read ? '<span class="chip ok">✓</span>' : '');
+      }
       const read = prog('material', m.id) === 'прочитано';
       return row('📄', m.title, esc(m.summary), 'material', m.id, read ? '<span class="chip ok">✓</span>' : '');
     }).join('') + '</div>').join('');
 };
+// PDF: файл приходит из таблицы кусками (только после проверки входа), рисует pdf.js — работает и на Android
+const fmtSize = b => b > 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' МБ' : Math.max(1, Math.round(b / 1024)) + ' КБ';
+const PDF_CACHE = {};
+let pdfZoom = 1;
+VIEWS.pdf = id => {
+  const x = (B.pdfs || []).find(p => p.id === id);
+  if (!x) return head('Не найдено') + '<div class="empty">Материал удалён или недоступен</div>';
+  const read = prog('material', 'pdf:' + id) === 'прочитано';
+  return head(x.title) + '<div class="qprog" style="margin-bottom:10px"><span class="chip">' + esc(x.section) + '</span><span style="flex:1"></span>' +
+    '<button class="chip" data-act="zoom" data-z="-1" aria-label="Уменьшить">−</button><button class="chip" data-act="zoom" data-z="1" aria-label="Увеличить">+</button></div>' +
+    '<div id="pdfBox" style="overflow-x:auto;margin:0 -16px;padding:0 8px;background:var(--surface-2);border-radius:12px;min-height:200px">' +
+    '<div class="center" style="min-height:240px"><div class="spin"></div><p id="pdfMsg">Загружаем…</p></div></div>' +
+    '<div class="btns"><button class="btn ' + (read ? 'okb' : '') + '" data-act="read" data-id="pdf:' + esc(id) + '">' + (read ? '✓ Прочитано' : 'Отметить «Прочитано»') + '</button></div>';
+};
+AFTER.pdf = async id => {
+  const box = document.getElementById('pdfBox'), msg = document.getElementById('pdfMsg');
+  try {
+    await loadPdfJs();
+    let data = PDF_CACHE[id];
+    if (!data) {
+      const chunks = [];
+      let parts = 1;
+      for (let i = 0; i < parts; i++) {
+        const r = await api('getPdf', id, i);
+        parts = r.parts;
+        chunks.push(r.data);
+        if (msg) msg.textContent = 'Загружаем… ' + Math.round((i + 1) / parts * 100) + '%';
+      }
+      const bin = chunks.map(c => atob(c)).join('');
+      data = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) data[i] = bin.charCodeAt(i);
+      PDF_CACHE[id] = data;
+    }
+    const doc = await pdfjsLib.getDocument({ data: data.slice() }).promise;
+    if (!document.body.contains(box)) return;
+    box.innerHTML = '';
+    const w = Math.min(box.clientWidth - 16, 900) * pdfZoom, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    for (let n = 1; n <= doc.numPages; n++) {
+      const page = await doc.getPage(n);
+      const vp = page.getViewport({ scale: w / page.getViewport({ scale: 1 }).width });
+      const c = document.createElement('canvas');
+      c.width = Math.floor(vp.width * dpr); c.height = Math.floor(vp.height * dpr);
+      c.style.cssText = 'display:block;margin:8px auto;background:#fff;box-shadow:var(--shadow);width:' + Math.floor(vp.width) + 'px;height:' + Math.floor(vp.height) + 'px';
+      box.appendChild(c);
+      await page.render({ canvasContext: c.getContext('2d'), viewport: page.getViewport({ scale: vp.scale * dpr }) }).promise;
+      if (!document.body.contains(box)) return;
+    }
+  } catch (e) {
+    if (box) box.innerHTML = '<div class="empty">Не получилось открыть файл: ' + esc(e.message) + '<br><br><button class="btn ghost" style="max-width:200px;margin:0 auto" data-act="pdfretry">Повторить</button></div>';
+  }
+};
+ACT.zoom = el => { pdfZoom = Math.min(3, Math.max(1, pdfZoom + Number(el.dataset.z) * 0.5)); render(false); };
+ACT.pdfretry = () => render(false);
+let pdfJsP = null;
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve();
+  return pdfJsP || (pdfJsP = new Promise((ok, fail) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    sc.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; ok(); };
+    sc.onerror = () => { pdfJsP = null; fail(new Error('нет связи')); };
+    document.head.appendChild(sc);
+  }));
+}
+
 VIEWS.material = id => {
   const m = byId(id);
   if (!m) return head('Не найдено') + '<div class="empty">Материал удалён</div>';
@@ -812,10 +881,10 @@ function errorScreen(msg) {
 function openFromLink() {
   // ссылка из бота: ?open=test-T01 / program-<id> / card-<id> / material-<id> / checklist-<id>
   const open = new URLSearchParams(location.search).get('open') || (TG && TG.initDataUnsafe && TG.initDataUnsafe.start_param) || '';
-  const m = open.match(/^(test|program|card|material|checklist)-(.+)$/);
+  const m = open.match(/^(test|program|card|material|checklist|pdf)-(.+)$/);
   if (!m) return;
   const view = m[1] === 'checklist' ? 'material' : m[1];
-  const t = { test: 'tests', program: 'materials', card: 'menu', material: 'materials' }[view];
+  const t = { test: 'tests', program: 'materials', card: 'menu', material: 'materials', pdf: 'materials' }[view];
   tab = t;
   stack = [{ view: t, arg: null, y: 0 }, { view, arg: m[2], y: 0 }];
 }
