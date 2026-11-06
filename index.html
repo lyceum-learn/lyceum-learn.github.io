@@ -330,7 +330,18 @@ function go(view, arg, replace) {
   render(true);
 }
 function back() {
-  if (stack.length > 1) { stack.pop(); render(false); }
+  if (stack.length < 2) return;
+  if (stack[stack.length - 1].view === 'run') return quitRun();
+  stack.pop(); render(false);
+}
+// во время теста нижнее меню скрыто: подсматривать в карточки и материалы нельзя; выйти — только прервав попытку
+function quitRun() {
+  modal('<h3>Прервать тест?</h3><p class="lead">Ответы не сохранятся — тест придётся начать заново.</p>' +
+    '<div class="btns"><button class="btn ghost" data-m="no">Продолжить тест</button><button class="btn" data-m="yes">Прервать</button></div>', ok => {
+    if (!ok) return;
+    ls.del(LS.run); RUN = null;
+    stack.pop(); render(false);
+  });
 }
 function setTab(t) {
   tab = t;
@@ -342,6 +353,7 @@ function render(top) {
   const fn = VIEWS[cur.view] || VIEWS.home;
   $app.innerHTML = '<div class="view' + (top ? ' anim' : '') + '">' + fn(cur.arg) + '</div>';
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  document.getElementById('tabs').hidden = cur.view === 'run';
   if (TG && TG.BackButton) { if (stack.length > 1) TG.BackButton.show(); else TG.BackButton.hide(); }
   window.scrollTo(0, top ? 0 : cur.y || 0);
   if (AFTER[cur.view]) AFTER[cur.view](cur.arg);
@@ -374,7 +386,7 @@ ACT.back = back;
 VIEWS.home = () => {
   const r = B.rank, st = B.stars;
   const nextPct = r.next ? Math.min(100, Math.round((st.earned - r.from) / Math.max(1, r.next.from - r.from) * 100)) : 100;
-  const first = String(B.me.name).split(/\s+/)[1] || B.me.name;
+  const first = B.me.first || String(B.me.name).split(/\s+/)[1] || B.me.name;
   let h = '<div class="hero">' + '<div class="ornament">' + logo() + '</div>' +
     '<div class="top">' + logo() + '<button class="me" data-go="profile"><span class="ava">' + initials(first) + '</span>Профиль</button></div>' +
     '<h1>Привет, ' + esc(first) + '!</h1><div class="sub">' + esc(B.me.role) + ' · ' + esc(B.me.object) + '</div>' +
@@ -533,10 +545,11 @@ VIEWS.test = id => {
   return head(t.title) + (t.desc ? '<p class="lead">' + esc(t.desc) + '</p>' : '') +
     '<div class="list" style="margin-top:8px">' +
     '<div class="row"><span class="ic">❓</span><span class="tx"><div class="tt">' + t.count + ' ' + plural(t.count, 'вопрос', 'вопроса', 'вопросов') + '</div><div class="mt">Проходной балл — ' + t.pass + '%</div></span></div>' +
-    '<div class="row"><span class="ic">⭐</span><span class="tx"><div class="tt">+' + t.stars + ' ' + plural(t.stars, 'звезда', 'звезды', 'звёзд') + ' за сдачу</div><div class="mt">Начисляются один раз · бонус за 100% с первой попытки</div></span></div>' +
+    '<div class="row"><span class="ic">⭐</span><span class="tx"><div class="tt">+' + t.stars + ' ' + plural(t.stars, 'звезда', 'звезды', 'звёзд') + ' за сдачу</div><div class="mt">Начисляются один раз' + (B.bonus ? ' · сдадите на 100% с первой попытки — ещё +' + B.bonus + ' ⭐ (всего ' + (t.stars + B.bonus) + ')' : '') + '</div></span></div>' +
     (st ? '<div class="row"><span class="ic">' + (st.passed ? '✅' : '📊') + '</span><span class="tx"><div class="tt">Лучший результат: ' + st.best + '%</div><div class="mt">Попыток: ' + st.attempts + ' · последняя ' + esc(st.last) + '</div></span></div>' : '') +
     (t.deadline ? '<div class="row"><span class="ic">📅</span><span class="tx"><div class="tt">Срок: ' + esc(t.deadline) + '</div></span>' + dlChip(t.deadline) + '</div>' : '') +
     '</div><div class="btns" style="flex-direction:column">' +
+    '<div class="lead" style="margin:14px 0 0;font-size:13px">Во время теста меню и материалы недоступны. Если выйти из теста, ответы не сохранятся.</div>' +
     (resume ? '<button class="btn" data-act="resume">Продолжить (вопрос ' + (run.i + 1) + ' из ' + run.questions.length + ')</button>' : '') +
     '<button class="btn' + (resume ? ' ghost' : '') + '" data-act="start" data-id="' + esc(t.id) + '">' + (st ? 'Пройти ещё раз' : 'Начать тест') + '</button></div>';
 };
@@ -586,7 +599,7 @@ ACT.next = async el => {
     refreshBoot();
   } catch (e) {
     toast(e.message);
-    if (/устарела|уже сохранена/.test(e.message)) { ls.del(LS.run); RUN = null; back(); return; }
+    if (/устарела|уже сохранена/.test(e.message)) { ls.del(LS.run); RUN = null; stack.pop(); render(false); return; }
     el.disabled = false; el.textContent = 'Завершить';
   }
 };
@@ -757,7 +770,7 @@ VIEWS.prizes = () => {
   return head('Звёзды и призы', true) +
     '<div class="wallet"><div><div class="mt" style="color:#8A6100;font-weight:600;font-size:13px">Ваш баланс</div><b>' + st.balance + ' ⭐</b></div>' +
     '<div style="text-align:right;font-size:13px;color:#8A6100">Ранг: <b style="font-size:15px">' + esc(B.rank.name) + '</b><br>заработано всего ' + st.earned + '</div></div>' +
-    '<div class="sec">Как получить звёзды</div><div class="lead" style="font-size:14px;margin:0">Сдавайте тесты (бонус за 100% с первой попытки), выполняйте чек-листы и проходите программы обучения.</div>' +
+    '<div class="sec">Как получить звёзды</div><div class="lead" style="font-size:14px;margin:0">За каждый сданный тест — звёзды один раз' + (B.bonus ? ', а за 100% с первой попытки — ещё +' + B.bonus + ' ⭐' : '') + '. Звёзды также дают за чек-листы и программы обучения.</div>' +
     '<div class="sec">Призы</div>' + (B.prizes.length ? '<div class="grid">' + B.prizes.map(p => {
       const can = st.balance >= p.price && (p.left === null || p.left > 0);
       return '<div class="prize">' + (p.photo ? '<div class="ph"><img src="' + esc(p.photo) + '" alt=""></div>' : '<div class="ph">🎁</div>') +
@@ -785,10 +798,33 @@ ACT.buy = el => {
 VIEWS.profile = () => {
   const st = B.stars;
   return head('Профиль') +
-    '<div class="row" style="border:0;background:var(--surface-2)"><span class="ic" style="background:var(--accent);color:#fff;font-weight:800">' + initials(B.me.name) + '</span><span class="tx"><div class="tt">' + esc(B.me.name) + '</div><div class="mt">' + esc(B.me.role) + ' · ' + esc(B.me.object) + '</div></span></div>' +
+    '<button class="row" style="border:0;background:var(--surface-2)" data-go="editProfile"><span class="ic" style="background:var(--accent);color:#fff;font-weight:800">' + initials(B.me.first || B.me.name) + '</span><span class="tx"><div class="tt">' + esc(B.me.name) + '</div><div class="mt">' + esc(B.me.role) + ' · ' + esc(B.me.object) + (B.me.birth ? ' · ' + esc(B.me.birth) : '') + '</div></span><span class="chip">✏️ Изменить</span></button>' +
     '<div class="sec">Ранги</div><div class="ladder">' + B.ranks.map(r => '<div class="rung' + (r.name === B.rank.name ? ' cur' : st.earned >= r.from ? ' done' : '') + '"><span>' + esc(r.name) + '</span><span>от ' + r.from + ' ⭐</span></div>').join('') + '</div>' +
     '<div class="sec">История тестов</div>' + (B.history.length ? '<div class="list">' + B.history.map(h => '<div class="row"><span class="ic">' + (h.passed ? '✅' : '❌') + '</span><span class="tx"><div class="tt">' + esc(h.test) + '</div><div class="mt">' + esc(h.date) + (h.stars ? ' · +' + h.stars + ' ⭐' : '') + '</div></span><span class="chip ' + (h.passed ? 'ok' : 'red') + '">' + h.pct + '%</span></div>').join('') + '</div>' : '<div class="empty">Вы ещё не проходили тесты</div>') +
     '<div class="sec">Звёзды</div>' + (B.ledger.length ? '<div class="list">' + B.ledger.map(l => '<div class="row"><span class="tx"><div class="tt" style="font-weight:500">' + esc(l.reason) + '</div><div class="mt">' + esc(l.date) + '</div></span><span class="chip ' + (l.stars > 0 ? 'gold' : '') + '">' + (l.stars > 0 ? '+' : '') + l.stars + ' ⭐</span></div>').join('') + '</div>' : '<div class="empty">Пока нет</div>');
+};
+
+VIEWS.editProfile = () => head('Моя анкета') +
+  '<p class="lead">Исправьте, если ошиблись при регистрации. Должность и объект меняет администратор.</p>' +
+  '<form id="prof" class="list" autocomplete="off">' + nameFields(B.me.last || String(B.me.name).split(/\s+/)[0], B.me.first || String(B.me.name).split(/\s+/).slice(1).join(' '), B.me.birth) +
+  '<button class="btn" style="margin-top:12px">Сохранить</button></form>';
+AFTER.editProfile = () => {
+  document.getElementById('prof').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const f = ev.target, btn = f.querySelector('button');
+    const form = { last: f.last.value.trim(), first: f.first.value.trim(), birth: f.birth.value };
+    const bad = checkName(form);
+    if (bad) return toast(bad);
+    btn.disabled = true; btn.textContent = 'Сохраняем…';
+    try {
+      const r = await api('updateProfile', form);
+      Object.assign(B.me, r);
+      ls.set(LS.boot, B);
+      haptic('success');
+      toast('Анкета сохранена');
+      back();
+    } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = 'Сохранить'; }
+  });
 };
 
 // ---------- мелочи интерфейса ----------
@@ -822,6 +858,21 @@ function screen(title, text, closeBtn) {
     (closeBtn && TG && TG.close ? '<button class="btn" style="max-width:260px" onclick="Telegram.WebApp.close()">Вернуться в бот</button>' : '') + '</div>';
 }
 
+// поля анкеты: фамилия и имя отдельно (иначе путают порядок), дата рождения — возраст считается сам
+function nameFields(last, first, birth) {
+  const max = new Date(); max.setFullYear(max.getFullYear() - 14);
+  return '<label class="flabel">Фамилия</label><input class="search" name="last" placeholder="Иванова" autocomplete="family-name" value="' + esc(last) + '">' +
+    '<label class="flabel">Имя</label><input class="search" name="first" placeholder="Мария" autocomplete="given-name" value="' + esc(first) + '">' +
+    '<label class="flabel">Дата рождения</label><input class="search" name="birth" type="date" min="1940-01-01" max="' + max.toISOString().slice(0, 10) + '" value="' + esc(isoDay(birth)) + '">';
+}
+const isoDay = d => { const m = String(d || '').match(/^(\d{2})\.(\d{2})\.(\d{4})/); return m ? m[3] + '-' + m[2] + '-' + m[1] : String(d || '').slice(0, 10); };
+function checkName(f) {
+  if (!f.last || !f.first) return 'Напишите фамилию и имя';
+  if (/\s/.test(f.last) && !f.first) return 'Имя — в отдельном поле';
+  if (!f.birth) return 'Укажите дату рождения';
+  return '';
+}
+
 // ---------- запуск ----------
 // анкета нового сотрудника → заявка администраторам
 async function regForm() {
@@ -836,17 +887,16 @@ async function regForm() {
     '<h2 style="font:600 30px/1.1 var(--serif);margin:14px 0 4px">Анкета сотрудника</h2>' +
     '<p class="lead">Администратор проверит её и откроет доступ — бот сообщит.</p>' +
     '<form id="reg" class="list" style="margin-top:10px" autocomplete="off">' +
-    '<label class="flabel">Фамилия и имя</label><input class="search" name="name" placeholder="Иванова Мария" value="' + esc(info.name) + '">' +
-    '<label class="flabel">Возраст</label><input class="search" name="age" inputmode="numeric" placeholder="23">' +
+    nameFields(info.last, info.first, '') +
     '<label class="flabel">Должность</label><select class="search" name="role">' + opt(info.roles, 'Выберите должность') + '</select>' +
     '<label class="flabel">Объект</label><select class="search" name="object">' + opt(info.objects, 'Выберите объект') + '</select>' +
     '<button class="btn" style="margin-top:12px">Отправить анкету</button></form></div>';
   document.getElementById('reg').addEventListener('submit', async ev => {
     ev.preventDefault();
     const f = ev.target, btn = f.querySelector('button');
-    const form = { name: f.name.value.trim(), age: f.age.value.trim(), role: f.role.value, object: f.object.value };
-    if (form.name.split(/\s+/).length < 2) return toast('Напишите фамилию и имя');
-    if (!form.age) return toast('Укажите возраст');
+    const form = { last: f.last.value.trim(), first: f.first.value.trim(), birth: f.birth.value, role: f.role.value, object: f.object.value };
+    const bad = checkName(form);
+    if (bad) return toast(bad);
     if (!form.role || !form.object) return toast('Выберите должность и объект');
     btn.disabled = true; btn.textContent = 'Отправляем…';
     try {
