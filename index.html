@@ -633,7 +633,7 @@ VIEWS.materials = () => {
       }
       if (m.type === 'pdf') {
         const read = prog('material', 'pdf:' + m.id) === 'прочитано';
-        return row('📕', m.title, 'PDF · ' + fmtSize(m.size), 'pdf', m.id, read ? '<span class="chip ok">✓</span>' : '');
+        return row('📕', m.title, '', 'pdf', m.id, read ? '<span class="chip ok">✓</span>' : '');
       }
       const read = prog('material', m.id) === 'прочитано';
       return row('📄', m.title, esc(m.summary), 'material', m.id, read ? '<span class="chip ok">✓</span>' : '');
