@@ -35,6 +35,7 @@ KEYS = {  # русские ключи шапки и английские син�
     'цена': 'price', 'price': 'price',
     'выход': 'weight', 'weight': 'weight',
     'теги': 'tags', 'tags': 'tags',
+    'где': 'where', 'where': 'where',  # пометка «Только Остоженка» — показывается, но не скрывает карточку
     'звёзды': 'stars', 'звезды': 'stars', 'stars': 'stars',
     'порядок': 'order', 'order': 'order',
     'уведомлять': 'notify', 'notify': 'notify',
@@ -257,7 +258,7 @@ def build():
             if kind == 'card':
                 base.update(type='card', category=meta.get('category') or 'Другое', photo=asset(meta.get('photo', ''), p),
                             allergens=[a[:1].upper() + a[1:].lower() for a in meta.get('allergens', [])],
-                            price=meta.get('price', ''), weight=meta.get('weight', ''), tags=meta.get('tags', []),
+                            price=meta.get('price', ''), weight=meta.get('weight', ''), tags=meta.get('tags', []), where=meta.get('where', ''),
                             summary=meta.get('summary', ''), html=body_html)
                 cards.append(base)
             else:

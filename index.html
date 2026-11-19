@@ -80,6 +80,10 @@ select.search { appearance: none; -webkit-appearance: none; color: var(--ink); }
 .fchip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 .fchip.no.on { background: var(--accent); border-color: var(--accent); }
 .flabel { font-size: 12px; color: var(--muted); margin-top: 10px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin: 4px 0 6px; background: var(--surface-2); border-radius: 14px; }
+.seg button { border: 0; border-radius: 11px; padding: 10px 6px; font-size: 14px; font-weight: 700; background: transparent; color: var(--muted); }
+.seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.seg .n { font-weight: 600; opacity: .6; margin-left: 4px; }
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
 .card { text-align: left; border-radius: var(--r); overflow: hidden; background: #fff; box-shadow: var(--shadow); border: 1px solid var(--line); display: flex; flex-direction: column; }
 .ph { width: 100%; aspect-ratio: 4/3; background: var(--surface-2); display: grid; place-items: center; position: relative; overflow: hidden; }
@@ -88,6 +92,8 @@ select.search { appearance: none; -webkit-appearance: none; color: var(--ink); }
 .ph .badge { position: absolute; top: 8px; left: 8px; }
 .card .cb { padding: 9px 11px 11px; }
 .card .ct { font-weight: 700; font-size: 14px; line-height: 1.3; }
+.where { font-size: 12px; font-weight: 700; color: var(--accent-dark); margin-top: 4px; }
+.chip.where { background: var(--accent-soft); margin-top: 0; }
 .al { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .al span { font-size: 11px; font-weight: 600; color: var(--accent-dark); background: var(--accent-soft); border-radius: 6px; padding: 1px 6px; }
 
@@ -412,6 +418,14 @@ VIEWS.home = () => {
     return '<button class="row" data-go="program" data-arg="' + esc(p.id) + '"><span class="ic">🧭</span><span class="tx"><div class="tt">' + esc(p.title) + '</div><div class="mt">' + pct + '% пройдено</div><div class="pbar"><i style="width:' + pct + '%"></i></div></span>' + chev + '</button>';
   }).join('') + '</div>';
 
+  // «Тетрадь Вкуса»: PDF из раздела «Тетрадь Вкуса» на Google Диске (грузятся через бота)
+  const tv = (B.pdfs || []).filter(x => /^тетрадь вкуса/i.test(x.section || ''));
+  if (tv.length) h += '<div class="sec">Тетрадь Вкуса</div><div class="list">' + tv.map(x => {
+    const read = prog('material', 'pdf:' + x.id) === 'прочитано';
+    const t = x.title.replace(/^тетрадь вкуса\s*[—–-]\s*/i, '') || x.title;
+    return row('📒', t.charAt(0).toUpperCase() + t.slice(1),'Состав и аллергены', 'pdf', x.id, read ? '<span class="chip ok">✓</span>' : '');
+  }).join('') + '</div>';
+
   const cs = cards();
   const rep = cs.filter(c => prog('card', c.id) === 'повторить').length, known = cs.filter(c => prog('card', c.id) === 'знаю').length;
   h += '<div class="sec">Тренировка</div><div class="list">' +
@@ -475,7 +489,7 @@ function drawMenu() {
     return '<button class="card" data-go="card" data-arg="' + esc(c.id) + '">' +
       '<div class="ph">' + (c.photo ? '<img src="' + esc(c.photo) + '" alt="" loading="lazy">' : '<span class="ini">' + initials(c.title) + '</span>') +
       (st ? '<span class="badge chip ' + (st === 'знаю' ? 'ok' : 'warn') + '">' + (st === 'знаю' ? '✓ Знаю' : '🔁') + '</span>' : '') + '</div>' +
-      '<div class="cb"><div class="ct">' + esc(c.title) + '</div>' + (c.allergens.length ? '<div class="al">' + c.allergens.map(a => '<span>' + esc(a) + '</span>').join('') + '</div>' : '') + '</div></button>';
+      '<div class="cb"><div class="ct">' + esc(c.title) + '</div>' + (c.where ? '<div class="where">📍 ' + esc(c.where) + '</div>' : '') + (c.allergens.length ? '<div class="al">' + c.allergens.map(a => '<span>' + esc(a) + '</span>').join('') + '</div>' : '') + '</div></button>';
   }).join('') + '</div>' : '<div class="empty">Ничего не найдено' + (menuF.no.length ? ' — попробуйте снять фильтр аллергенов' : '') + '</div>';
 }
 ACT.cat = el => { menuF.cat = el.dataset.v; render(false); };
@@ -488,7 +502,7 @@ VIEWS.card = id => {
   const st = prog('card', c.id);
   return head('') + photo(c, 'big-ph') + '<h2 style="font:600 28px/1.15 var(--serif);margin:0">' + esc(c.title) + '</h2>' +
     (c.summary ? '<div class="lead">' + esc(c.summary) + '</div>' : '') +
-    '<div class="facts">' + '<span class="chip">' + esc(c.category) + '</span>' + (c.weight ? '<span class="chip">' + esc(c.weight) + '</span>' : '') +
+    '<div class="facts">' + '<span class="chip">' + esc(c.category) + '</span>' + (c.where ? '<span class="chip where">📍 ' + esc(c.where) + '</span>' : '') + (c.weight ? '<span class="chip">' + esc(c.weight) + '</span>' : '') +
     (c.price ? '<span class="chip">' + esc(c.price) + ' ₽</span>' : '') + '</div>' +
     (c.allergens.length ? '<div class="sec" style="margin-top:6px">Аллергены</div><div class="al" style="margin-bottom:14px">' + c.allergens.map(a => '<span style="font-size:13px;padding:3px 9px">' + esc(a) + '</span>').join('') + '</div>' : '<div class="chip ok" style="margin-bottom:14px">Аллергенов нет</div>') +
     '<div class="prose">' + c.html + '</div>' +
@@ -509,7 +523,7 @@ VIEWS.flash = () => {
   const c = byId(flashQ[0]);
   if (!c) return head('Карточки меню') + '<div class="empty">Пока нет карточек</div>';
   return head('Карточки меню') + '<div class="qprog">Осталось ' + flashQ.length + '<div class="pbar"><i style="width:' + Math.round((1 - flashQ.length / Math.max(1, cards().length)) * 100) + '%"></i></div></div>' +
-    '<div class="flash">' + photo(c) + '<div class="fb"><div class="chip" style="margin-bottom:8px">' + esc(c.category) + '</div><h3>' + esc(c.title) + '</h3>' +
+    '<div class="flash">' + photo(c) + '<div class="fb"><div class="chip" style="margin-bottom:8px">' + esc(c.category) + '</div><h3>' + esc(c.title) + '</h3>' + (c.where ? '<div class="where">📍 ' + esc(c.where) + '</div>' : '') +
     (flashOpen ? (c.allergens.length ? '<div class="al" style="margin:8px 0 12px">' + c.allergens.map(a => '<span style="font-size:13px;padding:3px 9px">' + esc(a) + '</span>').join('') + '</div>' : '<div class="chip ok" style="margin:8px 0 12px">Аллергенов нет</div>') +
       '<div class="prose">' + c.html + '</div>' : '<div class="lead">Вспомните состав и аллергены, потом откройте карточку</div>') + '</div></div>' +
     (flashOpen ? '<div class="btns"><button class="btn ghost" data-act="fl" data-v="повторить">🔁 Повторить</button><button class="btn okb" data-act="fl" data-v="знаю">✓ Знаю</button></div>'
@@ -618,14 +632,29 @@ VIEWS.result = a => {
 };
 
 // материалы
+// Материалы делятся на «Учебные материалы» и «Для саморазвития».
+// Какие разделы — саморазвитие, задаётся в «Настройках» таблицы (по умолчанию «Анатомия сервиса»).
+let matSeg = 'study';
+function isSelfSection(sec) {
+  const s = String(sec || '').toLowerCase().trim();
+  return (B.selfSections && B.selfSections.length ? B.selfSections : ['Анатомия сервиса'])
+    .some(x => { x = String(x).toLowerCase().trim(); return s === x || s.startsWith(x + ' /'); });
+}
+ACT.seg = el => { matSeg = el.dataset.v; haptic('light'); render(false); };
 VIEWS.materials = () => {
-  const ms = materials().concat((B.pdfs || []).map(x => ({ ...x, type: 'pdf' })));
-  if (!ms.length && !programs().length) return head('Материалы', true) + '<div class="empty">Материалов пока нет</div>';
+  const all = materials().concat((B.pdfs || []).map(x => ({ ...x, type: 'pdf' })));
+  const self = all.filter(m => isSelfSection(m.section)), study = all.filter(m => !isSelfSection(m.section));
+  const ps = programs();
+  const nStudy = study.length + ps.length;
+  const seg = '<div class="seg"><button class="' + (matSeg === 'study' ? 'on' : '') + '" data-act="seg" data-v="study">Учебные материалы<span class="n">' + nStudy + '</span></button>' +
+    '<button class="' + (matSeg === 'self' ? 'on' : '') + '" data-act="seg" data-v="self">Для саморазвития<span class="n">' + self.length + '</span></button></div>';
+  const ms = matSeg === 'self' ? self : study;
+  const showProgs = matSeg === 'study' && ps.length;
+  if (!ms.length && !showProgs) return head('Материалы', true) + seg + '<div class="empty">' + (matSeg === 'self' ? 'Здесь появятся материалы для саморазвития' : 'Учебных материалов пока нет') + '</div>';
   const secs = {};
   ms.forEach(m => (secs[m.section] = secs[m.section] || []).push(m));
-  const ps = programs();
-  return head('Материалы', true) +
-    (ps.length ? '<div class="sec">Программы</div><div class="list">' + ps.map(p => { const pct = progPct(p); return row('🧭', p.title, pct + '% пройдено', 'program', p.id, pct === 100 ? '<span class="chip ok">Готово</span>' : ''); }).join('') + '</div>' : '') +
+  return head('Материалы', true) + seg +
+    (showProgs ? '<div class="sec">Программы</div><div class="list">' + ps.map(p => { const pct = progPct(p); return row('🧭', p.title, pct + '% пройдено', 'program', p.id, pct === 100 ? '<span class="chip ok">Готово</span>' : ''); }).join('') + '</div>' : '') +
     Object.keys(secs).map(s => '<div class="sec">' + esc(s) + '</div><div class="list">' + secs[s].map(m => {
       if (m.type === 'checklist') {
         const n = checked(m.id).length, all = m.items.length;
