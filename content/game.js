@@ -1,4 +1,4 @@
-// Игра «Поймай булку»: бариста «Лицея» ловит выпечку на поднос с четырёх лотков.
+// Игра «Поймай булку»: Лицеист ловит выпечку на поднос с четырёх лотков.
 // Только рейтинг (лист «Игра» в таблице): звёзды не начисляются, к обучению не привязана.
 // Экраны: game — лобби с рейтингом (обычный экран с нижним меню), play — сама игра на весь экран.
 // Выпечка — вырезки из фото меню (content/img/game), бариста и кухня нарисованы.
@@ -7,13 +7,13 @@
 
 const COL = { red: '#E8262E', peach: '#F4C3A8', blue: '#6E6AD0', cream: '#F6EBD0', black: '#1E1E1E' };
 
-// бариста в форме: чёрная оверсайз-футболка реглан с принтом Лицей × ZNWR, розовые широкие брюки. Смотрит вправо.
+// Лицеист в форме: чёрная оверсайз-футболка реглан с принтом Лицей × ZNWR, розовые широкие брюки. Смотрит вправо.
 function baristaSVG(up) {
-  const fArm = up ? 'M94 80 L114 36 L127 -14' : 'M94 80 L106 112 L130 100';
-  const bArm = up ? 'M54 84 L104 34 L121 -10' : 'M54 84 L96 118 L124 104';
-  const fSleeve = up ? 'M93 80 L100 63' : 'M93 80 L98 95';
+  // поднос держит одна (передняя) рука, ладонь под центром подноса; вторая рука прижата к телу
+  const fArm = up ? 'M94 80 L113 38 L135 -15' : 'M94 80 L104 114 L136 101';
+  const fSleeve = up ? 'M93 80 L100 63' : 'M93 80 L97 96';
   const tray = up ? [138, -22] : [140, 96];
-  const hand = up ? [[127, -14], [121, -10]] : [[130, 100], [124, 104]];
+  const hand = up ? [135, -15] : [136, 101];
   const arm = (d, c1, c2, w) => '<path d="' + d + '" fill="none" stroke="' + c1 + '" stroke-width="' + (w + 2.4) + '" stroke-linecap="round" stroke-linejoin="round"/>' +
     '<path d="' + d + '" fill="none" stroke="' + c2 + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round" transform="translate(-0.8,-0.8)"/>';
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -50 180 300" width="540" height="900">' +
@@ -25,9 +25,6 @@ function baristaSVG(up) {
     '<radialGradient id="tr" cx=".4" cy=".3" r=".9"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#ECE9E4"/><stop offset="1" stop-color="#BEB8AE"/></radialGradient>' +
     '<radialGradient id="ck" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#F58C88" stop-opacity=".55"/><stop offset="1" stop-color="#F58C88" stop-opacity="0"/></radialGradient>' +
     '</defs>' +
-    // задняя рука
-    arm(bArm, '#B9785A', '#D7966F', 9.5) +
-    '<circle cx="' + hand[1][0] + '" cy="' + hand[1][1] + '" r="6" fill="#D7966F"/>' +
     // брюки: широкие, со стрелками и тенью
     '<path d="M42 134 L98 134 L108 236 L74 237 L70 172 L66 237 L32 236 Z" fill="url(#pa)"/>' +
     '<path d="M56 140 L50 233 M86 140 L92 233" stroke="#D9776C" stroke-width="1.6" fill="none" opacity=".7"/>' +
@@ -43,6 +40,10 @@ function baristaSVG(up) {
     '<path d="M46 118 Q50 134 46 146 M90 120 Q86 134 92 146" stroke="#000" stroke-width="2" fill="none" opacity=".35"/>' +
     '<path d="M44 80 Q42 96 46 108" stroke="#fff" stroke-width="3" fill="none" opacity=".08" stroke-linecap="round"/>' +
     '<path d="M58 66 Q70 77 82 66" stroke="#4A4A50" stroke-width="3.2" fill="none"/>' +
+    // вторая рука прижата к телу: рукав, предплечье вдоль бока, кисть у бедра
+    arm('M45 80 L39 110 L45 136', '#B9785A', '#E2A47F', 9.5) +
+    '<path d="M45 80 L42 97" fill="none" stroke="#1A1A1D" stroke-width="20" stroke-linecap="round"/>' +
+    '<circle cx="45.5" cy="137" r="5.8" fill="#E2A47F"/>' +
     // принт: красный стакан, из которого тянется персиковый стебель с синими ягодами
     '<path d="M57 101 L72 99 Q69 105 74 109 Q68 112 73 117 Q66 119 72 125 L59 127 Z" fill="' + COL.red + '"/>' +
     '<path d="M70 100 Q74 90 83 88" stroke="' + COL.peach + '" stroke-width="3.2" fill="none" stroke-linecap="round"/>' +
@@ -51,7 +52,7 @@ function baristaSVG(up) {
     // передняя рука: рукав футболки, затем кожа
     arm(fArm, '#C98361', '#EDB18C', 10) +
     '<path d="' + fSleeve + '" fill="none" stroke="#1A1A1D" stroke-width="21" stroke-linecap="round"/>' +
-    '<circle cx="' + hand[0][0] + '" cy="' + hand[0][1] + '" r="6.4" fill="#EDB18C"/>' +
+    '<circle cx="' + hand[0] + '" cy="' + hand[1] + '" r="6.6" fill="#EDB18C"/>' +
     // голова
     '<path d="M58 44 Q56 62 72 62 Q90 62 92 44 Z" fill="#D99470" opacity=".5"/>' +
     '<circle cx="73" cy="36" r="22" fill="url(#fa)"/>' +
@@ -373,7 +374,7 @@ VIEWS.game = () => {
   let h = head('Разомнись');
   h += '<div class="gm-hero"><img class="b" src="data:image/svg+xml;charset=utf-8,' + encodeURIComponent(baristaSVG(true)) + '" alt="">' +
     '<div class="tx"><h3>Поймай булку</h3><div class="gm-buns">' + KINDS.map(bunImg).join('') + '</div>' +
-    '<p>Булки катятся из печей по четырём лоткам. Нажимайте на ту часть экрана, куда катится булка, и бариста поймает её на поднос. Уронили три — игра окончена.</p>' +
+    '<p>Булки катятся из печей по четырём лоткам. Нажимайте на ту часть экрана, куда катится булка, и Лицеист поймает её на поднос. Уронили три — игра окончена.</p>' +
     '<button class="btn" data-go="play">Играть</button></div></div>';
   h += '<div class="gm-me"><div><b>' + (my.best || '—') + '</b><span>ваш рекорд</span></div><div><b>' + (my.place ? my.place + '-е' : '—') + '</b><span>место в рейтинге</span></div></div>';
   h += '<div class="sec">Рейтинг</div>' +

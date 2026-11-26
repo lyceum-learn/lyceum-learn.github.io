@@ -301,7 +301,7 @@ function syncBadge(on) {
 
 // ---------- доступ к материалам по должности и проекту ----------
 function fits(x) {
-  if (!B || B.me.admin) return true;
+  if (!B || B.me.admin || B.me.all) return true; // администратор платформы и бэк-офис видят всё
   const roles = (x.roles || []).map(norm), places = (x.places || []).map(norm);
   const okR = !roles.length || roles.includes('все') || roles.includes(norm(B.me.role));
   const okP = !places.length || places.includes('все') || places.includes(norm(B.me.object)) || places.includes(norm(B.me.project));
@@ -995,6 +995,6 @@ function openFromLink() {
   flush();
 })();
 </script>
-<script src="content/game.js?v=2"></script>
+<script src="content/game.js?v=3"></script>
 </body>
 </html>
