@@ -338,6 +338,7 @@ function go(view, arg, replace) {
 function back() {
   if (stack.length < 2) return;
   if (stack[stack.length - 1].view === 'run') return quitRun();
+  if (stack[stack.length - 1].view === 'play' && window.gameBack) return window.gameBack();
   stack.pop(); render(false);
 }
 // во время теста нижнее меню скрыто: подсматривать в карточки и материалы нельзя; выйти — только прервав попытку
@@ -359,7 +360,7 @@ function render(top) {
   const fn = VIEWS[cur.view] || VIEWS.home;
   $app.innerHTML = '<div class="view' + (top ? ' anim' : '') + '">' + fn(cur.arg) + '</div>';
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
-  document.getElementById('tabs').hidden = cur.view === 'run';
+  document.getElementById('tabs').hidden = cur.view === 'run' || cur.view === 'play';
   if (TG && TG.BackButton) { if (stack.length > 1) TG.BackButton.show(); else TG.BackButton.hide(); }
   window.scrollTo(0, top ? 0 : cur.y || 0);
   if (AFTER[cur.view]) AFTER[cur.view](cur.arg);
@@ -431,7 +432,9 @@ VIEWS.home = () => {
   h += '<div class="sec">Тренировка</div><div class="list">' +
     '<button class="row" data-go="flash"><span class="ic">🃏</span><span class="tx"><div class="tt">Карточки меню</div><div class="mt">Знаю ' + known + ' из ' + cs.length + (rep ? ' · повторить ' + rep : '') + '</div><div class="pbar"><i style="width:' + (cs.length ? Math.round(known / cs.length * 100) : 0) + '%"></i></div></span>' + chev + '</button>';
   const notPassed = B.tests.filter(t => !(t.stat && t.stat.passed)).length;
-  h += '<button class="row" data-act="tab" data-tab2="tests"><span class="ic">📝</span><span class="tx"><div class="tt">Тесты</div><div class="mt">' + (notPassed ? 'Не сдано: ' + notPassed + ' из ' + B.tests.length : 'Все сданы 🎉') + '</div></span>' + chev + '</button></div>';
+  h += '<button class="row" data-act="tab" data-tab2="tests"><span class="ic">📝</span><span class="tx"><div class="tt">Тесты</div><div class="mt">' + (notPassed ? 'Не сдано: ' + notPassed + ' из ' + B.tests.length : 'Все сданы 🎉') + '</div></span>' + chev + '</button>';
+  const gm = B.game || {};
+  h += '<button class="row" data-go="game"><span class="ic">🥐</span><span class="tx"><div class="tt">Разомнись: поймай булку</div><div class="mt">' + (gm.best ? 'Рекорд ' + gm.best + (gm.place ? ' · ' + gm.place + '-е место' : '') : 'Мини-игра с рейтингом по точкам') + '</div></span>' + chev + '</button></div>';
   return h;
 };
 ACT.tab = el => setTab(el.dataset.tab2);
@@ -992,5 +995,6 @@ function openFromLink() {
   flush();
 })();
 </script>
+<script src="game.js"></script>
 </body>
 </html>
