@@ -10,8 +10,8 @@ const COL = { red: '#E8262E', peach: '#F4C3A8', blue: '#6E6AD0', cream: '#F6EBD0
 // Лицеист в форме: чёрная оверсайз-футболка реглан с принтом Лицей × ZNWR, розовые широкие брюки. Смотрит вправо.
 function baristaSVG(up) {
   // поднос держит одна (передняя) рука, ладонь под центром подноса; вторая рука прижата к телу
-  const fArm = up ? 'M94 80 L113 38 L135 -15' : 'M94 80 L104 114 L136 101';
-  const fSleeve = up ? 'M93 80 L100 63' : 'M93 80 L97 96';
+  const fArm = up ? 'M97 79 L113 38 L135 -15' : 'M97 79 L104 114 L136 101';
+  const fSleeve = up ? 'M96 79 L103 63' : 'M96 79 L99 97';
   const tray = up ? [138, -22] : [140, 96];
   const hand = up ? [135, -15] : [136, 101];
   const arm = (d, c1, c2, w) => '<path d="' + d + '" fill="none" stroke="' + c1 + '" stroke-width="' + (w + 2.4) + '" stroke-linecap="round" stroke-linejoin="round"/>' +
@@ -35,15 +35,15 @@ function baristaSVG(up) {
     '<path d="M34 245 L66 245 M78 245 L108 245" stroke="#F3E6DA" stroke-width="2.4" stroke-linecap="round"/>' +
     // шея и футболка
     '<rect x="62" y="52" width="16" height="22" rx="5" fill="#D99470"/>' +
-    '<path d="M58 66 Q70 75 82 66 L101 72 Q113 83 115 105 L101 110 L103 147 Q70 154 37 147 L39 110 L25 105 Q27 83 39 72 Z" fill="url(#sh)"/>' +
-    '<path d="M60 68 L39 106 M80 68 L101 106" stroke="#4A4A50" stroke-width="1.4" fill="none"/>' +
+    '<path d="M58 66 Q70 75 82 66 L96 71 Q103 75 103 86 L103 147 Q70 154 37 147 L37 86 Q37 75 44 71 Z" fill="url(#sh)"/>' +
     '<path d="M46 118 Q50 134 46 146 M90 120 Q86 134 92 146" stroke="#000" stroke-width="2" fill="none" opacity=".35"/>' +
     '<path d="M44 80 Q42 96 46 108" stroke="#fff" stroke-width="3" fill="none" opacity=".08" stroke-linecap="round"/>' +
     '<path d="M58 66 Q70 77 82 66" stroke="#4A4A50" stroke-width="3.2" fill="none"/>' +
     // вторая рука прижата к телу: рукав, предплечье вдоль бока, кисть у бедра
-    arm('M45 80 L39 110 L45 136', '#B9785A', '#E2A47F', 9.5) +
-    '<path d="M45 80 L42 97" fill="none" stroke="#1A1A1D" stroke-width="20" stroke-linecap="round"/>' +
-    '<circle cx="45.5" cy="137" r="5.8" fill="#E2A47F"/>' +
+    arm('M42 80 L36 110 L40 136', '#B9785A', '#E2A47F', 9.5) +
+    '<circle cx="40.5" cy="137" r="5.8" fill="#E2A47F"/>' +
+    '<path d="M43 78 L38 100" fill="none" stroke="#1A1A1D" stroke-width="17" stroke-linecap="round"/>' +
+    '<path d="M38 82 L35 99" fill="none" stroke="#fff" stroke-width="2" opacity=".08" stroke-linecap="round"/>' +
     // принт: красный стакан, из которого тянется персиковый стебель с синими ягодами
     '<path d="M57 101 L72 99 Q69 105 74 109 Q68 112 73 117 Q66 119 72 125 L59 127 Z" fill="' + COL.red + '"/>' +
     '<path d="M70 100 Q74 90 83 88" stroke="' + COL.peach + '" stroke-width="3.2" fill="none" stroke-linecap="round"/>' +
@@ -51,10 +51,9 @@ function baristaSVG(up) {
     '<path d="M62 134 L80 134" stroke="#fff" stroke-width="1.6" opacity=".7"/>' +
     // передняя рука: рукав футболки, затем кожа
     arm(fArm, '#C98361', '#EDB18C', 10) +
-    '<path d="' + fSleeve + '" fill="none" stroke="#1A1A1D" stroke-width="21" stroke-linecap="round"/>' +
+    '<path d="' + fSleeve + '" fill="none" stroke="#1A1A1D" stroke-width="17" stroke-linecap="round"/>' +
     '<circle cx="' + hand[0] + '" cy="' + hand[1] + '" r="6.6" fill="#EDB18C"/>' +
     // голова
-    '<path d="M58 44 Q56 62 72 62 Q90 62 92 44 Z" fill="#D99470" opacity=".5"/>' +
     '<circle cx="73" cy="36" r="22" fill="url(#fa)"/>' +
     '<ellipse cx="60" cy="40" rx="4.4" ry="5.4" fill="#E3A27D"/><path d="M59 38 Q61 40 59 43" stroke="#B9785A" stroke-width="1" fill="none"/>' +
     // волосы: короткие, волнистые, объёмные
