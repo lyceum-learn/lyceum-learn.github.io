@@ -81,7 +81,7 @@ let SPR = null;
 function sprites() {
   if (!SPR) {
     SPR = { up: svgImg(baristaSVG(true)), down: svgImg(baristaSVG(false)), hall: img('content/img/game/hall.jpg') };
-    SPR.hall.onload = () => { BG = null; };
+    SPR.hall.onload = () => { if (BG) BG.key = 'reload'; };
     KINDS.forEach(k => { SPR[k] = img(PIC(k)); });
     const lg = document.getElementById('logo');
     if (lg) {
@@ -183,30 +183,49 @@ function step(g, dt) {
 }
 
 // ---------- отрисовка ----------
-let BG = null; // статичный фон (фото зала + печи и лотки) рисуем один раз в отдельный холст
-function background(scale, vis) {
-  const key = scale + ':' + vis.map(Math.round).join(',');
+let BG = null; // статичный фон (фото зала + печи и лотки): один холст размером с экран, рисуется один раз
+function background(v, pw, ph) {
+  const key = pw + 'x' + ph;
   if (BG && BG.key === key) return BG.c;
-  const c = document.createElement('canvas');
-  c.width = Math.ceil((W + 200) * scale); c.height = Math.ceil((H + 600) * scale);
-  const x = c.getContext('2d');
-  x.scale(scale, scale); x.translate(100, 300);
-  const [x0, y0, x1, y1] = vis, vw = x1 - x0, vh = y1 - y0;
-  x.fillStyle = '#F3E7DC'; x.fillRect(-100, -300, W + 200, H + 600);
+  const c = BG && BG.c || document.createElement('canvas');
+  c.width = pw; c.height = ph;
+  const x = c.getContext('2d'), sc = v.dpr * v.s;
+  x.setTransform(sc, 0, 0, sc, v.dpr * v.ox, v.dpr * v.oy);
+  const x0 = -v.ox / v.s, y0 = -v.oy / v.s, vw = pw / sc, vh = ph / sc;
+  x.fillStyle = '#F3E7DC'; x.fillRect(x0, y0, vw, vh);
   // фото зала «Лицея» — по размеру экрана (cover), чуть осветлено, чтобы выпечка читалась
-  if (SPR && ready(SPR.hall)) {
+  const loaded = SPR && ready(SPR.hall);
+  if (loaded) {
     const im = SPR.hall, k = Math.max(vw / im.naturalWidth, vh / im.naturalHeight);
     const iw = im.naturalWidth * k, ih = im.naturalHeight * k;
     x.drawImage(im, x0 + (vw - iw) / 2, y0 + (vh - ih) * 0.55, iw, ih);
   }
-  let gr = x.createLinearGradient(0, y0, 0, y1);
+  const gr = x.createLinearGradient(0, y0, 0, y0 + vh);
   gr.addColorStop(0, 'rgba(255,248,240,.42)'); gr.addColorStop(.55, 'rgba(255,248,240,.12)'); gr.addColorStop(1, 'rgba(40,20,10,.18)');
   x.fillStyle = gr; x.fillRect(x0, y0, vw, vh);
-  // лотки и печи
   for (const L of LANES) chute(x, L);
   for (const L of LANES) ovenBody(x, L);
-  BG = { key, c };
+  BG = { key: loaded ? key : 'wait', c };
   return c;
+}
+
+// спрайты заранее растрируем в холсты нужного размера: SVG и тени в каждом кадре на iPhone очень медленные
+let BAKED = {};
+function baked(name, sc) {
+  const k = name + '@' + sc.toFixed(3);
+  if (BAKED[k]) return BAKED[k];
+  const S = sprites(), im = S[name];
+  if (!ready(im)) return null;
+  let lw, lh, pad = 0, shadow = false;
+  if (name === 'up' || name === 'down') { lw = 180 * K; lh = 300 * K; }
+  else { lw = 54; lh = 54 * im.naturalHeight / im.naturalWidth; pad = 8; shadow = true; }
+  const c = document.createElement('canvas');
+  c.width = Math.ceil((lw + pad * 2) * sc); c.height = Math.ceil((lh + pad * 2) * sc);
+  const x = c.getContext('2d');
+  x.scale(sc, sc);
+  if (shadow) { x.shadowColor = 'rgba(70,30,10,.35)'; x.shadowBlur = 6 * sc; x.shadowOffsetY = 3 * sc; }
+  x.drawImage(im, pad, pad, lw, lh);
+  return (BAKED[k] = { c, w: lw + pad * 2, h: lh + pad * 2, pad });
 }
 
 function chute(x, L) {
@@ -246,29 +265,31 @@ function ovenGlow(ctx, L, t) {
   ctx.restore();
 }
 
-function draw(ctx, g, scale, vis) {
-  const S = sprites();
+function draw(ctx, g, v, pw, ph) {
+  sprites();
+  const sc = v.dpr * v.s, shake = g.shake ? (Math.random() - 0.5) * 8 * g.shake / 0.3 : 0;
+  ctx.setTransform(1, 0, 0, 1, Math.round(shake * sc), 0);
+  ctx.drawImage(background(v, pw, ph), 0, 0);
+  ctx.setTransform(sc, 0, 0, sc, v.dpr * v.ox + Math.round(shake * sc), v.dpr * v.oy);
   ctx.save();
-  if (g.shake) ctx.translate((Math.random() - 0.5) * 8 * g.shake / 0.3, 0);
-  ctx.drawImage(background(scale, vis), -100, -300, W + 200, H + 600);
   for (const L of LANES) ovenGlow(ctx, L, g.t);
   // тень бариста
   ctx.fillStyle = 'rgba(80,30,20,.2)'; ctx.beginPath(); ctx.ellipse(CX + LANES[g.pos].side * 4, FLOOR - 1, 62, 8, 0, 0, 7); ctx.fill();
   // бариста
-  const up = LANES[g.pos].up, side = LANES[g.pos].side, im = up ? S.up : S.down;
-  ctx.save();
-  ctx.translate(CX, 598);
-  ctx.scale(side, 1);
-  if (ready(im)) ctx.drawImage(im, (-10 - 70) * K, (-50 - 246) * K, 180 * K, 300 * K);
-  ctx.restore();
+  const up = LANES[g.pos].up, side = LANES[g.pos].side, bb = baked(up ? 'up' : 'down', sc);
+  if (bb) {
+    ctx.save();
+    ctx.translate(CX, 598);
+    ctx.scale(side, 1);
+    ctx.drawImage(bb.c, (-10 - 70) * K, (-50 - 246) * K, bb.w, bb.h);
+    ctx.restore();
+  }
   // выпечка
   for (const it of g.items) {
-    const im2 = S[it.kind]; if (!ready(im2)) continue;
-    const w = 54, h = w * im2.naturalHeight / im2.naturalWidth;
-    ctx.save(); ctx.translate(it.x, it.y + 12); ctx.rotate(it.rot);
+    const sp = baked(it.kind, sc); if (!sp) continue;
+    ctx.save(); ctx.translate(it.x, it.y + 12); if (it.rot) ctx.rotate(it.rot);
     if (it.state === 'floor') { ctx.scale(1.12, 0.72); ctx.globalAlpha = Math.max(0, 1 - (g.t - it.ft) / 1.1); }
-    ctx.shadowColor = 'rgba(70,30,10,.35)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
-    ctx.drawImage(im2, -w / 2, -h, w, h);
+    ctx.drawImage(sp.c, -sp.w / 2, -sp.h + sp.pad, sp.w, sp.h);
     ctx.restore();
   }
   // искры и крошки
@@ -289,7 +310,7 @@ function draw(ctx, g, scale, vis) {
     ctx.restore();
   }
   ctx.restore();
-  if (g.flash) { ctx.fillStyle = 'rgba(232,38,46,' + (g.flash * 0.6) + ')'; ctx.fillRect(-100, 0, W + 200, H); }
+  if (g.flash) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = 'rgba(232,38,46,' + (g.flash * 0.6) + ')'; ctx.fillRect(0, 0, pw, ph); }
 }
 
 function star(ctx, x, y, r) {
@@ -397,7 +418,7 @@ AFTER.play = () => {
   const cv = document.getElementById('gmCv'), ctx = cv.getContext('2d');
   let view = { s: 1, ox: 0, oy: 0 };
   const resize = () => {
-    const dpr = Math.min(3, window.devicePixelRatio || 1), w = cv.clientWidth, h = cv.clientHeight;
+    const dpr = Math.min(2, window.devicePixelRatio || 1), w = cv.clientWidth, h = cv.clientHeight;
     if (!w || !h) { view = { s: 0, ox: 0, oy: 0, dpr }; return; }
     cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
     const s = Math.min(w / W, h / H);
@@ -421,14 +442,12 @@ AFTER.play = () => {
   }
   let last = performance.now(), shown = { score: -1, lives: -1 };
   function frame(now) {
-    if (!document.body.contains(cv)) { window.removeEventListener('resize', resize); window.removeEventListener('keydown', key); try { T && T.enableVerticalSwipes && T.enableVerticalSwipes(); } catch (e) {} G = null; return; }
+    if (!document.body.contains(cv)) { BG = null; BAKED = {}; window.removeEventListener('resize', resize); window.removeEventListener('keydown', key); try { T && T.enableVerticalSwipes && T.enableVerticalSwipes(); } catch (e) {} G = null; return; }
     if (cv.clientWidth && (cv.width !== Math.round(cv.clientWidth * view.dpr) || cv.height !== Math.round(cv.clientHeight * view.dpr) || !view.s)) resize();
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (G && !G.over && !G.paused) step(G, dt);
-    ctx.setTransform(view.dpr * view.s, 0, 0, view.dpr * view.s, view.dpr * view.ox, view.dpr * view.oy);
-    ctx.fillStyle = '#FCE8DC'; ctx.fillRect(-view.ox / view.s, -view.oy / view.s, cv.width, cv.height);
     if (G && view.s) {
-      draw(ctx, G, view.dpr * view.s, [-view.ox / view.s, -view.oy / view.s, (cv.clientWidth - view.ox) / view.s, (cv.clientHeight - view.oy) / view.s]);
+      draw(ctx, G, view, cv.width, cv.height);
       if (G.score !== shown.score || G.lives !== shown.lives) { shown = { score: G.score, lives: G.lives }; hud(); }
       if (G.over && !G.ended) { G.ended = true; finish(); }
     }
@@ -457,6 +476,9 @@ AFTER.play = () => {
     e.preventDefault();
   }
   window.addEventListener('keydown', key);
+  const qb = document.querySelector('.gm-hud [data-act="gmQuit"]');
+  if (qb) qb.addEventListener('pointerup', e => { e.preventDefault(); e.stopPropagation(); ACT.gmQuit(); });
+  qb && qb.addEventListener('click', e => { e.stopPropagation(); });
 
   function finish() {
     const g = G, prevBest = (B.game && B.game.best) || 0;
@@ -480,16 +502,9 @@ AFTER.play = () => {
   ACT.gmAgain = () => start();
 };
 
+// крестик и «Назад»: идёт игра — сразу заканчиваем и показываем итог (результат сохраняется); на итоге — выходим к рейтингу
 ACT.gmQuit = () => {
-  if (G && !G.over && G.score > 0) {
-    G.paused = true;
-    modal('<h3>Закончить игру?</h3><p class="lead">Результат ' + G.score + ' сохранится в рейтинге.</p>' +
-      '<div class="btns"><button class="btn ghost" data-m="no">Играть дальше</button><button class="btn" data-m="yes">Закончить</button></div>', ok => {
-      if (!G) return;
-      if (ok) { G.over = true; G.paused = false; } else G.paused = false;
-    });
-    return;
-  }
+  if (G && !G.over && G.score > 0) { G.over = true; return; }
   stack.pop(); render(false);
 };
 window.gameBack = () => ACT.gmQuit();
