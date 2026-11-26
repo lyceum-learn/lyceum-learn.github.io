@@ -124,7 +124,10 @@ function spawn(g) {
   // не даём двум булкам прийти почти одновременно в разные лотки — иначе поймать невозможно
   if (arrive - g.lastArrive < 0.42) { g.nextSpawn = g.t + 0.1; return; }
   g.lastArrive = arrive;
-  g.items.push({ lane, kind: KINDS[Math.floor(Math.random() * KINDS.length)], born: g.t, travel: d.travel, state: 'roll', x: 0, y: 0, rot: 0 });
+  // золотая (+2) — с 5 очков, ~7%; подгоревшая (ловить нельзя) — с 8 очков, ~12%
+  const r = Math.random();
+  const type = g.score >= 8 && r < 0.12 ? 'burnt' : g.score >= 5 && r < 0.19 ? 'gold' : '';
+  g.items.push({ lane, kind: KINDS[Math.floor(Math.random() * KINDS.length)], type, born: g.t, travel: d.travel, state: 'roll', x: 0, y: 0, rot: 0 });
   g.nextSpawn = g.t + d.every * (0.75 + Math.random() * 0.5);
 }
 
@@ -133,6 +136,12 @@ function burst(g, x, y, colors, n, up) {
     const a = Math.random() * Math.PI * (up ? 1 : 2) + (up ? Math.PI : 0), v = 60 + Math.random() * 140;
     g.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (up ? 60 : 0), r: 1.5 + Math.random() * 2.5, c: colors[i % colors.length], t: g.t, life: 0.5 + Math.random() * 0.4, star: up });
   }
+}
+
+function loseLife(g) {
+  g.lives--; g.shake = 0.3; g.flash = 0.25;
+  vibrate('error');
+  if (g.lives <= 0) g.over = true;
 }
 
 function step(g, dt) {
@@ -146,15 +155,23 @@ function step(g, dt) {
       it.y = L.s.y + (L.e.y - L.s.y) * p - Math.abs(Math.sin(p * 18)) * 2;
       it.rot = Math.sin(p * 18) * 0.08;
       if (p >= 1) {
-        if (g.pos === it.lane) {
+        if (g.pos === it.lane && it.type === 'burnt') {
+          // поймали подгоревшую — минус жизнь, булка отскакивает с подноса
+          it.state = 'fall'; it.safe = true; it.vx = -L.side * 120; it.vy = -260;
+          g.fx.push({ kind: 'text', text: 'Подгорела!', x: L.tray.x, y: L.tray.y - 44, t: g.t, color: '#3A2416' });
+          burst(g, L.tray.x, L.tray.y - 16, ['#3A2A22', '#6B5A50', '#9A8E86'], 12, true);
+          loseLife(g);
+        } else if (g.pos === it.lane) {
           it.state = 'caught'; it.ct = g.t;
-          g.score++;
-          g.fx.push({ kind: 'plus', x: L.tray.x, y: L.tray.y - 44, t: g.t });
-          burst(g, L.tray.x, L.tray.y - 16, ['#FFD34D', '#FFFFFF', '#E8262E'], 10, true);
-          if (g.score % 50 === 0 && g.lives < 3) { g.lives++; g.fx.push({ kind: 'life', x: CX, y: 170, t: g.t }); }
-          vibrate('light');
+          const add = it.type === 'gold' ? 2 : 1, before = g.score;
+          g.score += add;
+          g.fx.push({ kind: 'text', text: '+' + add, x: L.tray.x, y: L.tray.y - 44, t: g.t, color: it.type === 'gold' ? '#C98A00' : COL.red });
+          burst(g, L.tray.x, L.tray.y - 16, it.type === 'gold' ? ['#FFD34D', '#FFF3B0', '#F2B705', '#FFFFFF'] : ['#FFD34D', '#FFFFFF', '#E8262E'], it.type === 'gold' ? 22 : 10, true);
+          if (Math.floor(g.score / 50) > Math.floor(before / 50) && g.lives < 3) { g.lives++; g.fx.push({ kind: 'text', text: '+1 жизнь', x: CX, y: 170, t: g.t, color: COL.red }); }
+          vibrate(it.type === 'gold' ? 'medium' : 'light');
         } else {
           it.state = 'fall'; it.vx = L.side * 40; it.vy = 40;
+          if (it.type === 'burnt') it.safe = true; // пропустить подгоревшую — правильно
         }
       }
     } else if (it.state === 'caught') {
@@ -166,10 +183,8 @@ function step(g, dt) {
       it.vy += 1400 * dt; it.x += it.vx * dt; it.y += it.vy * dt; it.rot += it.vx > 0 ? 6 * dt : -6 * dt;
       if (it.y >= FLOOR - 6) {
         it.state = 'floor'; it.y = FLOOR - 6; it.ft = g.t;
-        burst(g, it.x, FLOOR - 4, ['#C8873E', '#E7B56A', '#8A5022'], 14, false);
-        g.lives--; g.shake = 0.3; g.flash = 0.25;
-        vibrate('error');
-        if (g.lives <= 0) g.over = true;
+        burst(g, it.x, FLOOR - 4, it.type === 'burnt' ? ['#2E221C', '#5A4A42', '#7A6A60'] : ['#C8873E', '#E7B56A', '#8A5022'], 14, false);
+        if (!it.safe) loseLife(g);
       }
     } else if (it.state === 'floor') {
       if (g.t - it.ft > 1.1) it.dead = true;
@@ -209,11 +224,38 @@ function background(v, pw, ph) {
   return c;
 }
 
+// перекраска фото булки: золото (по яркости в золотую гамму) или подгоревшая (темнее, в уголь)
+function tinted(im, w, h, variant) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d'); x.drawImage(im, 0, 0, w, h);
+  try {
+    const d = x.getImageData(0, 0, w, h), p = d.data;
+    for (let i = 0; i < p.length; i += 4) {
+      if (!p[i + 3]) continue;
+      const t = (0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2]) / 255;
+      if (variant === 'gold') {
+        // блестящее золото: тёмный янтарь → золото → почти белый блик, по яркости с повышенным контрастом
+        const u = Math.max(0, Math.min(1, (t - 0.5) * 1.5 + 0.55));
+        const A = [122, 74, 0], Gd = [255, 200, 40], Wt = [255, 248, 205];
+        const m = u < 0.7 ? [A, Gd, u / 0.7] : [Gd, Wt, (u - 0.7) / 0.3];
+        for (let c = 0; c < 3; c++) p[i + c] = m[0][c] + (m[1][c] - m[0][c]) * m[2];
+      } else {
+        // подгоревшая: уголь — от почти чёрного до серо-коричневого
+        const u = Math.pow(t, 1.3), A = [20, 14, 11], Z = [104, 84, 70];
+        for (let c = 0; c < 3; c++) p[i + c] = A[c] + (Z[c] - A[c]) * u;
+      }
+    }
+    x.putImageData(d, 0, 0);
+  } catch (e) {}
+  return c;
+}
+
 // спрайты заранее растрируем в холсты нужного размера: SVG и тени в каждом кадре на iPhone очень медленные
 let BAKED = {};
-function baked(name, sc) {
-  const k = name + '@' + sc.toFixed(3);
+function baked(full, sc) {
+  const k = full + '@' + sc.toFixed(3);
   if (BAKED[k]) return BAKED[k];
+  const [name, variant] = full.split(':');
   const S = sprites(), im = S[name];
   if (!ready(im)) return null;
   let lw, lh, pad = 0, shadow = false;
@@ -223,8 +265,10 @@ function baked(name, sc) {
   c.width = Math.ceil((lw + pad * 2) * sc); c.height = Math.ceil((lh + pad * 2) * sc);
   const x = c.getContext('2d');
   x.scale(sc, sc);
+  let src = im;
+  if (variant) src = tinted(im, Math.ceil(lw * sc), Math.ceil(lh * sc), variant);
   if (shadow) { x.shadowColor = 'rgba(70,30,10,.35)'; x.shadowBlur = 6 * sc; x.shadowOffsetY = 3 * sc; }
-  x.drawImage(im, pad, pad, lw, lh);
+  x.drawImage(src, pad, pad, lw, lh);
   return (BAKED[k] = { c, w: lw + pad * 2, h: lh + pad * 2, pad });
 }
 
@@ -286,7 +330,21 @@ function draw(ctx, g, v, pw, ph) {
   }
   // выпечка
   for (const it of g.items) {
-    const sp = baked(it.kind, sc); if (!sp) continue;
+    const sp = baked(it.kind + (it.type ? ':' + it.type : ''), sc); if (!sp) continue;
+    if (it.type === 'gold' && it.state !== 'floor') {
+      const pulse = 0.75 + Math.sin(g.t * 9) * 0.25, gr = ctx.createRadialGradient(it.x, it.y - 8, 4, it.x, it.y - 8, 40);
+      gr.addColorStop(0, 'rgba(255,220,90,' + (0.75 * pulse) + ')'); gr.addColorStop(1, 'rgba(255,220,90,0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(it.x, it.y - 8, 40, 0, 7); ctx.fill();
+      ctx.fillStyle = '#FFF6C8';
+      for (let k = 0; k < 3; k++) { const a = g.t * 3 + k * 2.1; star(ctx, it.x + Math.cos(a) * 26, it.y - 10 + Math.sin(a) * 18, 3 + pulse * 1.5); }
+    }
+    if (it.type === 'burnt' && it.state !== 'floor') {
+      for (let k = 0; k < 3; k++) {
+        const ph = (g.t * 0.9 + k / 3) % 1;
+        ctx.fillStyle = 'rgba(90,85,82,' + (0.45 * (1 - ph)) + ')';
+        ctx.beginPath(); ctx.arc(it.x - 6 + k * 6 + Math.sin(ph * 6 + k) * 4, it.y - 28 - ph * 34, 5 + ph * 9, 0, 7); ctx.fill();
+      }
+    }
     ctx.save(); ctx.translate(it.x, it.y + 12); if (it.rot) ctx.rotate(it.rot);
     if (it.state === 'floor') { ctx.scale(1.12, 0.72); ctx.globalAlpha = Math.max(0, 1 - (g.t - it.ft) / 1.1); }
     ctx.drawImage(sp.c, -sp.w / 2, -sp.h + sp.pad, sp.w, sp.h);
@@ -303,10 +361,9 @@ function draw(ctx, g, v, pw, ph) {
   for (const f of g.fx) {
     const p = (g.t - f.t) / 0.9, sc = 1 + Math.max(0, 0.3 - p) * 1.5;
     ctx.save(); ctx.globalAlpha = 1 - p; ctx.translate(f.x, f.y - p * 34); ctx.scale(sc, sc);
-    ctx.font = '800 ' + (f.kind === 'life' ? 22 : 26) + 'px Manrope, sans-serif'; ctx.textAlign = 'center';
+    ctx.font = '800 ' + (f.text.length > 3 ? 22 : 28) + 'px Manrope, sans-serif'; ctx.textAlign = 'center';
     ctx.lineWidth = 5; ctx.strokeStyle = '#fff'; ctx.lineJoin = 'round';
-    const tx = f.kind === 'life' ? '+1 жизнь' : '+1';
-    ctx.strokeText(tx, 0, 0); ctx.fillStyle = COL.red; ctx.fillText(tx, 0, 0);
+    ctx.strokeText(f.text, 0, 0); ctx.fillStyle = f.color || COL.red; ctx.fillText(f.text, 0, 0);
     ctx.restore();
   }
   ctx.restore();
@@ -373,7 +430,7 @@ VIEWS.game = () => {
   let h = head('Разомнись');
   h += '<div class="gm-hero"><img class="b" src="data:image/svg+xml;charset=utf-8,' + encodeURIComponent(baristaSVG(true)) + '" alt="">' +
     '<div class="tx"><h3>Поймай булку</h3><div class="gm-buns">' + KINDS.map(bunImg).join('') + '</div>' +
-    '<p>Булки катятся из печей по четырём лоткам. Нажимайте на ту часть экрана, куда катится булка, и Лицеист поймает её на поднос. Уронили три — игра окончена.</p>' +
+    '<p>Булки катятся из печей по четырём лоткам. Нажимайте на ту часть экрана, куда катится булка, и Лицеист поймает её на поднос. Уронили три — игра окончена.</p><p>✨ Золотая булка — +2 очка. 🔥 Подгоревшую не ловите: поймали — минус жизнь, пропустили — ничего страшного.</p>' +
     '<button class="btn" data-go="play">Играть</button></div></div>';
   h += '<div class="gm-me"><div><b>' + (my.best || '—') + '</b><span>ваш рекорд</span></div><div><b>' + (my.place ? my.place + '-е' : '—') + '</b><span>место в рейтинге</span></div></div>';
   h += '<div class="sec">Рейтинг</div>' +
@@ -509,4 +566,5 @@ ACT.gmQuit = () => {
 };
 window.gameBack = () => ACT.gmQuit();
 window.gameState = () => G; // для проверки на стенде
+window.gameStep = dt => G && step(G, dt);
 })();
