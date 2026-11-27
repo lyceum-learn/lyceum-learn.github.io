@@ -436,7 +436,7 @@ VIEWS.game = () => {
   h += '<div class="sec">Рейтинг</div>' +
     '<div class="seg" id="gmPeriod"><button data-p="month" class="' + (TOP.period === 'month' ? 'on' : '') + '">Этот месяц</button><button data-p="all" class="' + (TOP.period === 'all' ? 'on' : '') + '">Всё время</button></div>' +
     '<div class="seg" id="gmBy"><button data-b="people" class="' + (TOP.by === 'people' ? 'on' : '') + '">Сотрудники</button><button data-b="places" class="' + (TOP.by === 'places' ? 'on' : '') + '">Точки</button></div>' +
-    '<div id="gmTop"><div class="empty">Загружаю рейтинг…</div></div>';
+    '<div id="gmTop"><div class="empty">Загружаю рейтинг…</div></div><div id="gmMine"></div>';
   return h;
 };
 AFTER.game = () => {
@@ -454,15 +454,51 @@ AFTER.game = () => {
     el.innerHTML = rows.length ? '<div class="gm-top">' + rows.map(x => '<div class="r' + (x.me ? ' me' : '') + '"><span class="n">' + x.place + '</span><span class="who"><div>' + esc(x.name) + (x.me ? ' (вы)' : '') + '</div><span>' + esc(x.object) + '</span></span><span class="sc">' + x.score + '</span></div>').join('') + '</div>'
       : '<div class="empty">Пока никто не играл — будьте первым!</div>';
   };
+  const mine = () => {
+    const el = document.getElementById('gmMine'), d = TOP.data.all || TOP.data.month;
+    if (!el || !d || !d.mine) return;
+    el.innerHTML = d.mine.length ? '<div class="sec">Мои игры</div><div class="gm-top">' + d.mine.map(x => '<div class="r"><span class="who"><div>' + esc(x.date) + '</div><span>' +
+      (x.note ? esc(x.note) : x.sec ? x.sec + ' с' : '') + '</span></span><span class="sc"' + (x.note ? ' style="color:var(--muted);text-decoration:line-through"' : '') + '>' + x.score + '</span></div>').join('') + '</div>' : '';
+  };
   const load = () => {
     const p = TOP.period;
-    paint();
-    api('gameTop', p).then(d => { TOP.data[p] = d; paint(); }).catch(e => { const el = box(); if (el && !TOP.data[p]) el.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; });
+    paint(); mine();
+    flushGames().catch(() => {}).then(() => api('gameTop', p)).then(d => { TOP.data[p] = d; paint(); mine(); }).catch(e => { const el = box(); if (el && !TOP.data[p]) el.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; });
   };
   document.getElementById('gmPeriod').onclick = e => { const b = e.target.closest('[data-p]'); if (!b) return; TOP.period = b.dataset.p; document.querySelectorAll('#gmPeriod button').forEach(x => x.classList.toggle('on', x === b)); load(); };
   document.getElementById('gmBy').onclick = e => { const b = e.target.closest('[data-b]'); if (!b) return; TOP.by = b.dataset.b; document.querySelectorAll('#gmBy button').forEach(x => x.classList.toggle('on', x === b)); paint(); };
   load();
 };
+
+// ---------- сохранение результата ----------
+const GQ = () => 'learn-game-q-' + uid;
+// ждём номер игры (до 10 с), отправляем; нет связи — кладём в очередь и отправим при следующем открытии игры
+async function saveGame(g) {
+  if (g.saving) return g.saving;
+  g.saving = (async () => {
+    const token = g.token || await Promise.race([g.tokenP, new Promise(ok => setTimeout(() => ok(null), 10000))]);
+    if (!token) return 'Нет связи с сервером — результат не сохранён';
+    try {
+      const r = await api('gameEnd', token, g.score);
+      B.game = r; ls.set(LS.boot, B); TOP.data = {};
+      return '';
+    } catch (e) {
+      if (e.server) return e.message;
+      ls.set(GQ(), ls.get(GQ(), []).concat([{ token, score: g.score }]));
+      return 'Нет связи — сохраню результат, когда появится интернет';
+    }
+  })();
+  return g.saving;
+}
+async function flushGames() {
+  let q = ls.get(GQ(), []);
+  while (q.length) {
+    const x = q[0];
+    try { const r = await api('gameEnd', x.token, x.score); B.game = r; ls.set(LS.boot, B); TOP.data = {}; }
+    catch (e) { if (!e.server) return; }
+    q = q.slice(1); ls.set(GQ(), q);
+  }
+}
 
 // ---------- сама игра ----------
 VIEWS.play = () => '<div class="gm-play" id="gmPlay"><canvas id="gmCv"></canvas>' +
@@ -486,10 +522,12 @@ AFTER.play = () => {
   start();
 
   function start() {
-    G = newGame();
+    const g = G = newGame();
     document.getElementById('gmOver').innerHTML = '';
     hud();
-    api('gameStart').then(r => { if (G) G.token = r.token; }).catch(() => {});
+    // номер игры от сервера: без него результат не сохранить. Не пришёл — пробуем ещё раз
+    const ask = n => api('gameStart').then(r => (g.token = r.token)).catch(e => n > 0 ? new Promise(ok => setTimeout(ok, 1500)).then(() => ask(n - 1)) : null);
+    g.tokenP = ask(3);
   }
   function hud() {
     const sc = document.getElementById('gmScore'), lv = document.getElementById('gmLives');
@@ -499,7 +537,7 @@ AFTER.play = () => {
   }
   let last = performance.now(), shown = { score: -1, lives: -1 };
   function frame(now) {
-    if (!document.body.contains(cv)) { BG = null; BAKED = {}; window.removeEventListener('resize', resize); window.removeEventListener('keydown', key); try { T && T.enableVerticalSwipes && T.enableVerticalSwipes(); } catch (e) {} G = null; return; }
+    if (!document.body.contains(cv)) { if (G && G.score > 0 && !G.ended) { G.ended = true; saveGame(G); } BG = null; BAKED = {}; window.removeEventListener('resize', resize); window.removeEventListener('keydown', key); try { T && T.enableVerticalSwipes && T.enableVerticalSwipes(); } catch (e) {} G = null; return; }
     if (cv.clientWidth && (cv.width !== Math.round(cv.clientWidth * view.dpr) || cv.height !== Math.round(cv.clientHeight * view.dpr) || !view.s)) resize();
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (G && !G.over && !G.paused) step(G, dt);
@@ -549,12 +587,9 @@ AFTER.play = () => {
         '<div class="btns2"><button class="btn" data-act="gmAgain">Ещё раз</button><button class="btn ghost" data-act="gmQuit">Рейтинг</button></div></div></div>';
     };
     vibrate(g.score > prevBest ? 'medium' : 'heavy');
+    if (g.score === 0) { show(''); return; }
     show('Сохраняю результат…');
-    if (!g.token || g.score === 0) { show(g.token ? '' : 'Нет связи — результат не сохранён'); return; }
-    api('gameEnd', g.token, g.score).then(r => {
-      B.game = r; ls.set(LS.boot, B); TOP.data = {};
-      show('');
-    }).catch(e => show(e.message));
+    saveGame(g).then(note => show(note));
   }
   ACT.gmAgain = () => start();
 };
@@ -562,6 +597,7 @@ AFTER.play = () => {
 // крестик и «Назад»: идёт игра — сразу заканчиваем и показываем итог (результат сохраняется); на итоге — выходим к рейтингу
 ACT.gmQuit = () => {
   if (G && !G.over && G.score > 0) { G.over = true; return; }
+  if (G && G.score > 0 && !G.ended) { G.ended = true; saveGame(G); }
   stack.pop(); render(false);
 };
 window.gameBack = () => ACT.gmQuit();
